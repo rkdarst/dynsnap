@@ -20,6 +20,15 @@ class Events(object):
         c = self.conn.cursor()
         c.executemany("INSERT INTO event VALUES (?, ?, ?)", it)
         self.conn.commit()
+    def t_min(self):
+        c = self.conn.cursor()
+        c.execute("SELECT min(t) from event group by t")
+        return c.fetchone()[0]
+    def t_max(self):
+        c = self.conn.cursor()
+        c.execute("SELECT max(t) from event group by t")
+        return c.fetchone()[0]
+
 
     def __len__(self):
         c = self.conn.cursor()
@@ -61,11 +70,11 @@ import pcd.support.algorithms as algs
 import numpy
 
 class SnapshotFinder(object):
-    old_es = None
-    old_g = None
+    old_es = None   # None on first round
     old_incremental_es = None
     dt_min = 1
     dt_max = 1000
+    dt_step = 1
     dt_extra = 50
     def __init__(self, evs):
         self.evs = evs
@@ -124,7 +133,10 @@ class SnapshotFinder(object):
     measure = measure_esjacc
 
     def find(self):
-        all_dts = range(self.dt_min, self.dt_max+1, 1)
+        all_dts = numpy.arange(self.dt_min, self.dt_max+self.dt_step,
+                               self.dt_step)
+        # sqlite3 can't handle numpy.int64, convert all to floats.
+        all_dts = [ eval(repr(x)) for x in all_dts ]
         xs = [ ]
         ts = [ ]
         dts = [ ]
@@ -160,7 +172,6 @@ class SnapshotFinder(object):
         x_max = xs[i_max]
         es1s, es2s = self.get(dt_max)  # to save correct es2s
 
-        #print "  %4d %3d %3d %s"%(self.tstart, dt_max, i_max, len(dts))
 
         tstart = self.tstart
         self.tstart = self.tstart + dt_max
@@ -171,6 +182,8 @@ class SnapshotFinder(object):
         else:
             self.old_es = es2s
             return tstart, self.tstart
+
+        #print "  %4d %3d %3d %s"%(self.tstart, dt_max, i_max, len(dts))
 
 import os
 def load_events(fname, col_time=0, col_weight=None, regen=False):
@@ -229,6 +242,12 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--plot", action='store_true',
                         help="Plot also?")
 
+    parser.add_argument("--tstart", type=float,)
+    parser.add_argument("--dtmin", type=float,)
+    parser.add_argument("--dtmax", type=float,)
+    parser.add_argument("--dtstep", type=float,)
+    parser.add_argument("--dtextra", type=float,)
+
     args = parser.parse_args()
     print args
 
@@ -237,8 +256,18 @@ if __name__ == '__main__':
     print "file loaded"
 
     finder = SnapshotFinder(evs)
-    finder.tstart = 1000
-    #finder.dt_extra = 100
+    # Find tstart
+    if args.tstart:
+        finder.tstart = 1000
+    else:
+        finder.tstart = evs.t_min()
+    #
+    if args.dtextra is not None: finder.dt_extra = args.dtextra
+    if args.dtmin   is not None: finder.dt_min   = args.dtmin
+    if args.dtmax   is not None: finder.dt_max   = args.dtmax
+    if args.dtstep  is not None: finder.dt_step  = args.dtstep
+
+
     points = [ ]
     finding_data = [ ]
     if args.output:
