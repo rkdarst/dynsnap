@@ -161,9 +161,16 @@ class SnapshotFinder(object):
         es1s, es2s = self.get(dt_max)  # to save correct es2s
 
         #print "  %4d %3d %3d %s"%(self.tstart, dt_max, i_max, len(dts))
+
+        tstart = self.tstart
         self.tstart = self.tstart + dt_max
-        self.old_es = es2s
-        return self.tstart-dt_max, self.tstart
+        if self.old_es is None:
+            # first round
+            self.old_es = es1s
+            return tstart, self.tstart
+        else:
+            self.old_es = es2s
+            return tstart, self.tstart
 
 import os
 def load_events(fname, col_time=0, col_weight=None, regen=False):
