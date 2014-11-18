@@ -126,6 +126,7 @@ class SnapshotFinder(object):
     def find(self):
         all_dts = range(self.dt_min, self.dt_max+1, 1)
         xs = [ ]
+        ts = [ ]
         dts = [ ]
         es1max = es2max = None
         i_max = None
@@ -138,6 +139,7 @@ class SnapshotFinder(object):
             x = self.measure(es1s, es2s)
 
             dts.append(dt)
+            ts.append(self.tstart+dt)
             xs.append(x)
 
             i_max = numpy.argmax(xs)
@@ -149,7 +151,8 @@ class SnapshotFinder(object):
         if i_max is None:
             return None
 
-        self.tried_dts = [self.tstart+dt for dt in dts ]
+        self.tried_dts = dts
+        self.tried_ts = ts
         self.tried_xs = xs
 
         #print xs
@@ -163,7 +166,7 @@ class SnapshotFinder(object):
         return self.tstart-dt_max, self.tstart
 
 import os
-def load_events(fname, col_time=0, col_weight=None):
+def load_events(fname, col_time=0, col_weight=None, regen=False):
     events = { }
     def _iter():
         f = open(fname)
@@ -185,7 +188,8 @@ def load_events(fname, col_time=0, col_weight=None):
                 events[e] = i
             yield t, i, w
     cache_fname = fname + '.cache'
-    if True:
+    if regen:
+        # remove existing cache if it exists.
         if os.path.exists(cache_fname):
             os.unlink(cache_fname)
     if os.path.exists(cache_fname):
@@ -208,36 +212,51 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="benchmark model to simulate",)
     parser.add_argument("output", help="Output prefix", nargs='?')
+    parser.add_argument("--regen", action='store_true',
+                        help="Recreate temporal event cache")
 
     parser.add_argument("-t",  type=int, default=0,
                         help="Time column")
     parser.add_argument("-w", type=int, default=None,
                         help="Weight column")
+    parser.add_argument("-p", "--plot", action='store_true',
+                        help="Plot also?")
 
     args = parser.parse_args()
     print args
 
     evs = load_events(args.input, col_time=args.t,
-                      col_weight=args.w)
+                      col_weight=args.w, regen=args.regen)
     print "file loaded"
 
     finder = SnapshotFinder(evs)
-    finder.tstart = 0
+    finder.tstart = 1000
     #finder.dt_extra = 100
     points = [ ]
     finding_data = [ ]
+    if args.output:
+        fout = open(args.output+'.txt', 'w')
     while True:
         x = finder.find()
         print finder.tstart
         if x is None:
             break
-        finding_data.append((finder.tried_dts, finder.tried_xs, finder.tstart))
+        finding_data.append((finder.tried_ts, finder.tried_xs, finder.tstart))
         points.append((x[0], x[1]-x[0]))
         points.append((x[1], x[1]-x[0]))
-        print x
+        # Write and record informtion
+        if args.output:
+            print >> fout, '# t1=%s t2=%s dt=%s'%(x[0], x[1], x[1]-x[0])
+            for dt, t, x in zip(finder.tried_dts,
+                                finder.tried_ts,
+                                finder.tried_xs):
+                print >> fout, t, x, dt
+            print >> fout
+            fout.flush()
 
 
-    if args.output:
+
+    if args.plot:
         import pcd.support.matplotlibutil as mplutil
         fname = args.output+'.[pdf,png]'
         fig, extra = mplutil.get_axes(fname, figsize=(10, 10),
@@ -245,12 +264,12 @@ if __name__ == '__main__':
         ax = fig.add_subplot(2, 1, 1)
         ax2 = fig.add_subplot(2, 1, 2)
         ax.set_xlabel('time')
-        ax2.set_xlim(0, points[-1][0])
+        #ax2.set_xlim(0, points[-1][0])
 
         x, y = zip(*points)
         ls = ax.plot(x, y, '-o')
-        for dts, xs, new_tstart in finding_data:
-            ls = ax2.plot(dts, xs, '-')
+        for ts, xs, new_tstart in finding_data:
+            ls = ax2.plot(ts, xs, '-')
             #ax.axvline(x=new_tstart, color=ls[0].get_color())
         mplutil.save_axes(fig, extra)
 
