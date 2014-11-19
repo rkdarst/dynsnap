@@ -168,8 +168,8 @@ class SnapshotFinder(object):
         self.tried_xs = xs
 
         #print xs
-        dt_max = dts[i_max]
-        x_max = xs[i_max]
+        dt_max = self.found_dt_max = dts[i_max]
+        x_max  = self.found_x_max  = xs[i_max]
         es1s, es2s = self.get(dt_max)  # to save correct es2s
 
 
@@ -283,6 +283,9 @@ if __name__ == '__main__':
         # Write and record informtion
         if args.output:
             print >> fout, '# t1=%s t2=%s dt=%s'%(x[0], x[1], x[1]-x[0])
+            print >> fout, '# J=%s'%finder.found_x_max
+            print >> fout, '# len(old_es)=%s'%len(finder.old_es)
+            #print >> fout, '# len(old_es)=%s'%len(finder.old_es)
             for dt, t, x in zip(finder.tried_dts,
                                 finder.tried_ts,
                                 finder.tried_xs):
