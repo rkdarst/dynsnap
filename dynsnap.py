@@ -269,7 +269,7 @@ def load_events(fname, col_time=0, col_weight=None, regen=False,
             t = ast.literal_eval(line.pop(col_time))
             col_weight2 = col_weight # modified in this scope so needs
                                      # local copy
-            if col_weight is not None:
+            if col_weight is not None and col_weight != -1:
                 assert col_weight != col_time, ("weight column specified "
                                                 "same as time column.")
                 if col_weight > col_time:
