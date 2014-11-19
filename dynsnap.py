@@ -393,7 +393,11 @@ if __name__ == '__main__':
 
 
     if args.plot:
-        import pcd.support.matplotlibutil as mplutil
+        try:
+            import pcd.support.matplotlibutil as mplutil
+            raise ImportError
+        except ImportError:
+            import mplutil
         fname = args.output+'.[pdf,png]'
         fig, extra = mplutil.get_axes(fname, figsize=(10, 10),
                                       ret_fig=True)
