@@ -45,6 +45,16 @@ the options "-t 3 -w 2".  For a undirected graph, use the
     c b	2.0 1
     a c	1.0 2
 
+GROUPED FORMAT: With the option "--grouped", you can have multiple
+events on the same line.  Each event is one space-separated string.
+Time lines can repeat.  Use "-t" to specify the time column, if not
+the first, and "-w" to represent a weight column if it exists.  The
+same weight applies to everything on the line.
+    # t events
+    0 a b d
+    1 a e f g h
+    2 b c d
+
 CACHING: You can use "--cache" to cache the processed input file  in
 a '.cache' file beside the original input file.  This is an sqlite
 database, but that is unimportant.  The cache depends on the "-t",
@@ -78,6 +88,9 @@ Options:
     If given, the ordering of other columns does not matter, and lines
     with events "aaa bbb ccc" and "aaa ccc bbb" are considered the
     same.
+--grouped
+    Alternative input format where each line can have multiple
+    events.
 
 --plot, -p
     Write some plots at OutputName.{pdf,png}.  Requires matplotlib and

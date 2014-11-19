@@ -271,7 +271,7 @@ class SnapshotFinder(object):
 import ast
 import os
 def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
-                unordered=False):
+                unordered=False, grouped=False):
     events = { }
     def _iter():
         if fname == '-':
@@ -297,6 +297,17 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 w = ast.literal_eval(line.pop(col_weight2))
             else:
                 w = 1.0
+            if grouped:
+                # each line contains many different events.  Handle
+                # his case, then coninue the loop.
+                for e in line:
+                    if e in events:
+                        i = events[e]
+                    else:
+                        i = len(events)
+                        events[e] = i
+                    yield t, i, w
+                continue
             if unordered:
                 e = frozenset(line)
             else:
@@ -341,6 +352,9 @@ if __name__ == '__main__':
                         help="Recreate temporal event cache")
     parser.add_argument("--unordered", action='store_true',
                         help="Event columns on the line are unordered")
+    parser.add_argument("--grouped", action='store_true',
+                        help="Each line contains different space-separated "
+                        "events.")
 
     parser.add_argument("-t",  type=int, default=0,
                         help="Time column")
@@ -361,7 +375,8 @@ if __name__ == '__main__':
     evs = load_events(args.input, col_time=args.t,
                       col_weight=args.w, cache=args.cache,
                       regen=args.regen,
-                      unordered=args.unordered)
+                      unordered=args.unordered,
+                      grouped=args.grouped)
     print "file loaded"
 
     finder = SnapshotFinder(evs)
