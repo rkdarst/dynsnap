@@ -153,6 +153,9 @@ class SnapshotFinder(object):
             #es1s = set(es1)
             #es2s = set(es2)
             x = self.measure(es1s, es2s)
+            if x == 0:
+                continue
+            #print dt, len(es1s), len(es2s), x
 
             self._finder_data['dts'].append(dt)
             self._finder_data['ts'].append(self.tstart+dt)
