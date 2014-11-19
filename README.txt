@@ -45,11 +45,12 @@ the options "-t 3 -w 2".  For a undirected graph, use the
     c b	2.0 1
     a c	1.0 2
 
-CACHING: For efficiency reasons, when a file is read, it is stored in
+CACHING: You can use "--cache" to cache the processed input file  in
 a '.cache' file beside the original input file.  This is an sqlite
 database, but that is unimportant.  The cache depends on the "-t",
-"-w", and "--unordered" options.  If you change any of these options,
-you MUST run with the "--regen" option to regenerate the cache.
+"-w", and "--unordered" options.  If you use "--cache" and change any
+of these options, you MUST run with the "--regen" option to regenerate
+the cache.
 
 
 Usage
@@ -81,6 +82,13 @@ Options:
 --plot, -p
     Write some plots at OutputName.{pdf,png}.  Requires matplotlib and
     pcd.
+
+--cache
+    Store the processed input file in InputFile.cache.  This will
+    speed up re-runs of the method.
+--regen
+    Regenerate data in the cache (remove it before starting, then
+    recreate it.)
 
 --tstart
 --dtmin

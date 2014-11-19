@@ -255,7 +255,7 @@ class SnapshotFinder(object):
 
 import ast
 import os
-def load_events(fname, col_time=0, col_weight=None, regen=False,
+def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 unordered=False):
     events = { }
     def _iter():
@@ -288,14 +288,17 @@ def load_events(fname, col_time=0, col_weight=None, regen=False,
                 i = len(events)
                 events[e] = i
             yield t, i, w
-    cache_fname = fname + '.cache'
-    if regen:
-        # remove existing cache if it exists.
+    if cache:
+        cache_fname = fname + '.cache'
+        if regen:
+            # remove existing cache if it exists.
+            if os.path.exists(cache_fname):
+                os.unlink(cache_fname)
         if os.path.exists(cache_fname):
-            os.unlink(cache_fname)
-    if os.path.exists(cache_fname):
-        ev = Events(cache_fname)
-        return ev
+            ev = Events(cache_fname)
+            return ev
+    else:
+        cache_fname = ':memory:'
     ev = Events(cache_fname)
     ev.add_events(_iter())
     return ev
@@ -313,6 +316,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="benchmark model to simulate",)
     parser.add_argument("output", help="Output prefix", nargs='?')
+    parser.add_argument("--cache", action='store_true',
+                        help="Cache input for efficiency")
     parser.add_argument("--regen", action='store_true',
                         help="Recreate temporal event cache")
     parser.add_argument("--unordered", action='store_true',
@@ -335,7 +340,8 @@ if __name__ == '__main__':
     #print args
 
     evs = load_events(args.input, col_time=args.t,
-                      col_weight=args.w, regen=args.regen,
+                      col_weight=args.w, cache=args.cache,
+                      regen=args.regen,
                       unordered=args.unordered)
     print "file loaded"
 
