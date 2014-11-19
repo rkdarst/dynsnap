@@ -71,11 +71,11 @@ class Events(object):
         self.conn.commit()
     def t_min(self):
         c = self.conn.cursor()
-        c.execute("SELECT min(t) from event group by t")
+        c.execute("SELECT min(t) from event")
         return c.fetchone()[0]
     def t_max(self):
         c = self.conn.cursor()
-        c.execute("SELECT max(t) from event group by t")
+        c.execute("SELECT max(t) from event")
         return c.fetchone()[0]
 
 
@@ -408,7 +408,8 @@ if __name__ == '__main__':
         ax.set_ylabel('Snapshot length (t)')
         ax.set_xlabel('time')
         ax2.set_ylabel('Jaccard score (or measure)')
-        #ax2.set_xlim(0, points[-1][0])
+        ax.set_xlim(evs.t_min(), evs.t_max())
+        ax2.set_xlim(evs.t_min(), evs.t_max())
 
         x, y = zip(*points)
         ls = ax.plot(x, y, '-o')
