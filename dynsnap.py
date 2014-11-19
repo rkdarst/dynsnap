@@ -265,6 +265,7 @@ def load_events(fname, col_time=0, col_weight=None, regen=False,
             line = line.strip()
             if line.startswith('#'): continue
             line = line.split()
+            if not line: continue
             t = ast.literal_eval(line.pop(col_time))
             col_weight2 = col_weight # modified in this scope so needs
                                      # local copy
