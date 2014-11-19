@@ -367,7 +367,7 @@ if __name__ == '__main__':
     finder = SnapshotFinder(evs)
     # Find tstart
     if args.tstart:
-        finder.tstart = 1000
+        finder.tstart = args.tstart
     else:
         finder.tstart = evs.t_min()
     if args.w is not None:
