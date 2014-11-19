@@ -64,9 +64,9 @@ class _EventListSubset(object):
 
 
 
-import networkx as nx
-import pcd.cmtycmp
-import pcd.support.algorithms as algs
+#import networkx as nx
+#import pcd.cmtycmp
+#import pcd.support.algorithms as algs
 import numpy
 
 class SnapshotFinder(object):
