@@ -287,8 +287,8 @@ if __name__ == '__main__':
     if args.output:
         fout_thresh = open(args.output+'.out.txt', 'w')
         fout_full = open(args.output+'.out.J.txt', 'w')
-        print >> fout_thresh, '#thigh tlow dt val len(old_es) measure_dat'
-        print >> fout_full, '#t val dt'
+        print >> fout_thresh, '#tlow thigh dt val len(old_es) measure_data'
+        print >> fout_full, '#t val dt measure_data'
     while True:
         x = finder.find()
         print finder.tstart
@@ -305,7 +305,7 @@ if __name__ == '__main__':
         points.append((thigh, thigh-tlow))
         # Write and record informtion
         if args.output:
-            print >> fout_thresh, thigh, tlow, dt, val, len(finder.old_es), \
+            print >> fout_thresh, tlow, thigh, dt, val, len(finder.old_es), \
                   finder._measure_data
             print >> fout_full, '# t1=%s t2=%s dt=%s'%(tlow, thigh, thigh-tlow)
             print >> fout_full, '# J=%s'%val
