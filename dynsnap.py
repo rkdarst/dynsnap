@@ -274,7 +274,11 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 unordered=False):
     events = { }
     def _iter():
-        f = open(fname)
+        if fname == '-':
+            import sys
+            f = sys.stdin
+        else:
+            f = open(fname)
         for line in f:
             #line = line.split('#', 1)[0]
             line = line.strip()
