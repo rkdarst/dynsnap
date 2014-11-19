@@ -88,8 +88,11 @@ class Events(object):
                       "order by t", (tmin, ))
         for row in c:
             yield row[0]
-
-
+    def dump(self):
+        c = self.conn.cursor()
+        c.execute("SELECT t,e,w from event")
+        for row in c:
+            print row[0], row[1], row[2]
 
     def __len__(self):
         c = self.conn.cursor()
