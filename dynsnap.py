@@ -112,11 +112,13 @@ class SnapshotFinder(object):
             return self.old_es, self.get_succesive(dt)
 
     def measure_esjacc(self, es1s, es2s):
-        den = float(len(es1s | es2s))
-        if den == 0:
+        union = len(es1s | es2s)
+        if union == 0:
             x = float('nan')
         else:
-            x = len(es1s & es2s) / den
+            intersect = len(es1s & es2s)
+            x = intersect / float(union)
+            self._measure_data = (intersect, union, len(es1s), len(es2s))
         return x
     def measure_nmi(self, es1s, es2s):
         g1 = nx.Graph(x for x in es1s)
@@ -171,7 +173,7 @@ class SnapshotFinder(object):
         dt_max = self.found_dt_max = dts[i_max]
         x_max  = self.found_x_max  = xs[i_max]
         es1s, es2s = self.get(dt_max)  # to save correct es2s
-
+        self.measure(es1s, es2s) # rerun to store correct self._measure_data
 
         tstart = self.tstart
         self.tstart = self.tstart + dt_max
@@ -271,27 +273,36 @@ if __name__ == '__main__':
     points = [ ]
     finding_data = [ ]
     if args.output:
-        fout = open(args.output+'.txt', 'w')
+        fout_thresh = open(args.output+'.out.txt', 'w')
+        fout_full = open(args.output+'.out.J.txt', 'w')
+        print >> fout_thresh, '#thigh tlow dt val len(old_es) measure_dat'
+        print >> fout_full, '#t val dt'
     while True:
         x = finder.find()
         print finder.tstart
         if x is None:
             break
+        tlow  = x[0]
+        thigh = x[1]
+        dt = thigh-tlow
+        val = finder.found_x_max
         finding_data.append((finder.tried_ts, finder.tried_xs, finder.tstart))
-        points.append((x[0], x[1]-x[0]))
-        points.append((x[1], x[1]-x[0]))
+        points.append((tlow,  thigh-tlow))
+        points.append((thigh, thigh-tlow))
         # Write and record informtion
         if args.output:
-            print >> fout, '# t1=%s t2=%s dt=%s'%(x[0], x[1], x[1]-x[0])
-            print >> fout, '# J=%s'%finder.found_x_max
-            print >> fout, '# len(old_es)=%s'%len(finder.old_es)
+            print >> fout_thresh, thigh, tlow, dt, val, len(finder.old_es), \
+                  finder._measure_data
+            print >> fout_full, '# t1=%s t2=%s dt=%s'%(tlow, thigh, thigh-tlow)
+            print >> fout_full, '# J=%s'%val
+            print >> fout_full, '# len(old_es)=%s'%len(finder.old_es)
             #print >> fout, '# len(old_es)=%s'%len(finder.old_es)
             for dt, t, x in zip(finder.tried_dts,
                                 finder.tried_ts,
                                 finder.tried_xs):
-                print >> fout, t, x, dt
-            print >> fout
-            fout.flush()
+                print >> fout_full, t, x, dt
+            print >> fout_full
+            fout_full.flush()
 
 
 
