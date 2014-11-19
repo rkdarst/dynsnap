@@ -139,9 +139,11 @@ class SnapshotFinder(object):
                                self.dt_step)
         # sqlite3 can't handle numpy.int64, convert all to floats.
         all_dts = [ eval(repr(x)) for x in all_dts ]
-        xs = [ ]
-        ts = [ ]
+
         dts = [ ]
+        xs = [ ]
+        self._finder_data = dict(xs=[], ts=[], dts=[],
+                                 measure_data=[])
         es1max = es2max = None
         i_max = None
         for i, dt in enumerate(all_dts):
@@ -152,8 +154,11 @@ class SnapshotFinder(object):
             #es2s = set(es2)
             x = self.measure(es1s, es2s)
 
+            self._finder_data['dts'].append(dt)
+            self._finder_data['ts'].append(self.tstart+dt)
+            self._finder_data['xs'].append(x)
+            self._finder_data['measure_data'].append(self._measure_data)
             dts.append(dt)
-            ts.append(self.tstart+dt)
             xs.append(x)
 
             i_max = numpy.argmax(xs)
@@ -164,10 +169,6 @@ class SnapshotFinder(object):
                 break
         if i_max is None:
             return None
-
-        self.tried_dts = dts
-        self.tried_ts = ts
-        self.tried_xs = xs
 
         #print xs
         dt_max = self.found_dt_max = dts[i_max]
@@ -286,7 +287,9 @@ if __name__ == '__main__':
         thigh = x[1]
         dt = thigh-tlow
         val = finder.found_x_max
-        finding_data.append((finder.tried_ts, finder.tried_xs, finder.tstart))
+        finding_data.append((finder._finder_data['ts'],
+                             finder._finder_data['xs'],
+                             finder.tstart))
         points.append((tlow,  thigh-tlow))
         points.append((thigh, thigh-tlow))
         # Write and record informtion
@@ -297,10 +300,11 @@ if __name__ == '__main__':
             print >> fout_full, '# J=%s'%val
             print >> fout_full, '# len(old_es)=%s'%len(finder.old_es)
             #print >> fout, '# len(old_es)=%s'%len(finder.old_es)
-            for dt, t, x in zip(finder.tried_dts,
-                                finder.tried_ts,
-                                finder.tried_xs):
-                print >> fout_full, t, x, dt
+            for i, t in enumerate(finder._finder_data['ts']):
+                print >> fout_full, t, \
+                                    finder._finder_data['xs'][i], \
+                                    finder._finder_data['dts'][i], \
+                                    finder._finder_data['measure_data'][i]
             print >> fout_full
             fout_full.flush()
 
