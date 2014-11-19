@@ -77,6 +77,18 @@ class Events(object):
         c = self.conn.cursor()
         c.execute("SELECT max(t) from event")
         return c.fetchone()[0]
+    def times_next(self, tmin, range=None):
+        """Return distinct times after t."""
+        c = self.conn.cursor()
+        if range:
+            c.execute("SELECT distinct t from event where ?<t<=? "
+                      "order by t", (tmin, tmin+range))
+        else:
+            c.execute("SELECT distinct t from event where ?<t "
+                      "order by t", (tmin, ))
+        for row in c:
+            yield row[0]
+
 
 
     def __len__(self):
