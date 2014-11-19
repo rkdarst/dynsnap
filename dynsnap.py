@@ -191,6 +191,7 @@ class SnapshotFinder(object):
 
         #print "  %4d %3d %3d %s"%(self.tstart, dt_max, i_max, len(dts))
 
+import ast
 import os
 def load_events(fname, col_time=0, col_weight=None, regen=False):
     events = { }
@@ -201,9 +202,14 @@ def load_events(fname, col_time=0, col_weight=None, regen=False):
             line = line.strip()
             if line.startswith('#'): continue
             line = line.split()
-            t = line.pop(col_time)
+            t = ast.literal_eval(line.pop(col_time))
             if col_weight is not None:
-                w = line.pop(col_weight)
+                assert col_weight != col_time, ("weight column specified "
+                                                "same as time column.")
+                if col_weight > col_time:
+                    # We removed one column, need to adjust.
+                    col_weight -= 1
+                w = ast.literal_eval(line.pop(col_weight))
             else:
                 w = 1.0
             e = ' '.join(line)
@@ -267,6 +273,8 @@ if __name__ == '__main__':
         finder.tstart = 1000
     else:
         finder.tstart = evs.t_min()
+    if args.w is not None:
+        finder.weighted = True
     #
     if args.dtextra is not None: finder.dt_extra = args.dtextra
     if args.dtmin   is not None: finder.dt_min   = args.dtmin
