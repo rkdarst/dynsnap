@@ -266,13 +266,15 @@ def load_events(fname, col_time=0, col_weight=None, regen=False,
             if line.startswith('#'): continue
             line = line.split()
             t = ast.literal_eval(line.pop(col_time))
+            col_weight2 = col_weight # modified in this scope so needs
+                                     # local copy
             if col_weight is not None:
                 assert col_weight != col_time, ("weight column specified "
                                                 "same as time column.")
                 if col_weight > col_time:
                     # We removed one column, need to adjust.
-                    col_weight -= 1
-                w = ast.literal_eval(line.pop(col_weight))
+                    col_weight2 -= 1
+                w = ast.literal_eval(line.pop(col_weight2))
             else:
                 w = 1.0
             if unordered:
