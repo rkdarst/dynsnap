@@ -329,7 +329,7 @@ if __name__ == '__main__':
     parser.add_argument("--dtextra", type=float,)
 
     args = parser.parse_args()
-    print args
+    #print args
 
     evs = load_events(args.input, col_time=args.t,
                       col_weight=args.w, regen=args.regen,
@@ -360,13 +360,13 @@ if __name__ == '__main__':
         print >> fout_full, '#t val dt measure_data'
     while True:
         x = finder.find()
-        print finder.tstart
         if x is None:
             break
         tlow  = x[0]
         thigh = x[1]
         dt = thigh-tlow
         val = finder.found_x_max
+        print tlow, thigh, val, dt
         finding_data.append((finder._finder_data['ts'],
                              finder._finder_data['xs'],
                              finder.tstart))
@@ -397,7 +397,10 @@ if __name__ == '__main__':
                                       ret_fig=True)
         ax = fig.add_subplot(2, 1, 1)
         ax2 = fig.add_subplot(2, 1, 2)
+        ax.set_xlabel('time (also snapshots intervals)')
+        ax.set_ylabel('Snapshot length (t)')
         ax.set_xlabel('time')
+        ax2.set_ylabel('Jaccard score (or measure)')
         #ax2.set_xlim(0, points[-1][0])
 
         x, y = zip(*points)
