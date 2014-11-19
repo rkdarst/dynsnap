@@ -2,6 +2,55 @@
 
 import sqlite3
 
+class _LenProxy(object):
+    def __init__(self, l):   self.l = l
+    def __len__(self): return self.l
+class WeightedSet(object):
+    def __init__(self, it):
+        data = self._data = { }
+        for x, w in it:
+            if x not in data:    data[x] = w
+            else:                data[x] += w
+    def update(self, it):
+        data = self._data
+        for x, w in it:
+            if x not in data:    data[x] = w
+            else:                data[x] += w
+    def __len__(self):
+        return len(self._data)
+    def __and__(self, other):
+        """Set intersection"""
+        if len(self) <= len(other):
+            A, B = self._data, other._data
+        else:
+            A, B = other._data, self._data
+        # A is the smaller set
+        intersection = 0.0
+        for x, w in A.iteritems():
+            if x in B:
+                intersection += min(A[x], B[x])
+        return _LenProxy(intersection)
+    def __or__(self, other):
+        """Set intersection"""
+        if len(self) <= len(other):
+            A, B = self._data, other._data
+        else:
+            A, B = other._data, self._data
+        # A is the smaller set
+        union = sum(B.itervalues())
+        for x, w in A.iteritems():
+            union += max(0,   A[x] - B.get(x, 0))
+        return _LenProxy(union)
+def test_weightedset():
+    from nose.tools import assert_equal
+    A = WeightedSet([('a',1), ('b',2),])
+    B = WeightedSet([('b',1), ('c',2),])
+    C = WeightedSet([('a',1), ('c',1), ('d',3)])
+    assert_equal(len(A & B), 1)
+    assert_equal(len(A | B), 5)
+    assert_equal(len(A & C), 1)
+    assert_equal(len(A | C), 7)
+
 class Events(object):
     def __init__(self, fname=':memory:'):
         self.conn = sqlite3.connect(fname)
@@ -76,13 +125,26 @@ class SnapshotFinder(object):
     dt_max = 1000
     dt_step = 1
     dt_extra = 50
+    weighted = False
     def __init__(self, evs):
         self.evs = evs
+    def _set_make(self, cursor):
+        if not self.weighted:
+            es = set(e for t, e, w in cursor)
+        else:
+            es = WeightedSet((e,w) for t, e, w in cursor)
+        return es
+    def _set_update(self, set_, cursor):
+        if not self.weighted:
+            set_.update(set(e for t,e,w in cursor))
+        else:
+            set_.update(set((e,w) for t,e,w in cursor))
+
     def get_first(self, dt):
-        es1 = self.evs[self.tstart: self.tstart+dt]
-        es1 = set(e for t, e, w in es1)
-        es2 = self.evs[self.tstart+dt: self.tstart+2*dt]
-        es2 = set(e for t, e, w in es2)
+        cursor = self.evs[self.tstart: self.tstart+dt]
+        es1 = self._set_make(cursor)
+        cursor = self.evs[self.tstart+dt: self.tstart+2*dt]
+        es2 = self._set_make(cursor)
         return es1, es2
     def get_succesive(self, dt):
         es = None
@@ -93,13 +155,13 @@ class SnapshotFinder(object):
             old_tstart, old_dt, old_es = self.old_incremental_es
             if old_tstart == self.tstart and old_dt < dt:
                 #print "using cache"
-                es = self.evs[self.tstart+old_dt : self.tstart+dt]
-                old_es.update(set(e for t,e,w in es))
+                cursor = self.evs[self.tstart+old_dt : self.tstart+dt]
+                self._set_update(old_es, cursor)
                 es = old_es
         if es is None:
             # Recreate edge set from scratch
             es = self.evs[self.tstart: self.tstart+dt]
-            es = set(e for t,e,w in es)
+            es = self._set_make(es)
 
         # Cache our results for the next interval
         self.old_incremental_es = (self.tstart, dt, es)
