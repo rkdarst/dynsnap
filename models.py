@@ -8,15 +8,13 @@ rand = lambda: random.uniform(0, 1)
 def toy101(args):
     for t in range(0, 100):
         events = [0, 1, 2, 3, 4, 5]
-        for e in events:
-            print t*100, e, 1
+        print t*100, " ".join(str(x) for x in sorted(events))
 
 def toy102(args):
     for t in range(0, 100):
         generation = t // 10
         events = range(generation*6, (generation+1)*6)
-        for e in events:
-            print t*100, e, 1
+        print t*100, " ".join(str(x) for x in sorted(events))
 
 def toy103(args):
     n = 50
@@ -25,8 +23,7 @@ def toy103(args):
         generation = t // 10
         events = range(generation*n, (generation+1)*n)
         events2 = random.sample(events, s)
-        for e in events2:
-            print t*100, e, 1
+        print t*100, " ".join(str(x) for x in sorted(events2))
 
 
 def periodic(args):
