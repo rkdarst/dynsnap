@@ -141,6 +141,7 @@ class SnapshotFinder(object):
     dt_step = 1
     dt_extra = 50
     weighted = False
+    args = None
     def __init__(self, evs):
         self.evs = evs
     def _set_make(self, cursor):
@@ -271,8 +272,15 @@ class SnapshotFinder(object):
         self.tstart = self.tstart + dt_max
         if self.old_es is None:
             # first round
-            self.old_es = es1s
-            return tstart, self.tstart
+            if getattr(self.args, 'merge_first', True):
+                # Merge the first two intervals into a big one.
+                self.old_es = es1s | es2s
+                self.tstart += dt_max  # double interval
+                return tstart, self.tstart
+            else:
+                # Old (normal) way of handling the first interval.
+                self.old_es = es1s
+                return tstart, self.tstart
         else:
             self.old_es = es2s
             return tstart, self.tstart
@@ -366,6 +374,10 @@ if __name__ == '__main__':
     parser.add_argument("--grouped", action='store_true',
                         help="Each line contains different space-separated "
                         "events.")
+    parser.add_argument("--dont-merge-first", action='store_false',
+                        default=True, dest="merge_first",
+                        help="Each line contains different space-separated "
+                        "events.")
 
     parser.add_argument("-t",  type=int, default=0,
                         help="Time column")
@@ -391,6 +403,7 @@ if __name__ == '__main__':
     print "file loaded"
 
     finder = SnapshotFinder(evs)
+    finder.args = args
     # Find tstart
     if args.tstart:
         finder.tstart = args.tstart

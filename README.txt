@@ -91,6 +91,8 @@ Options:
 --grouped
     Alternative input format where each line can have multiple
     events.
+--dont-merge-first
+    Do not perform the "merge first two intervals" process.
 
 --plot, -p
     Write some plots at OutputName.{pdf,png}.  Requires matplotlib and
