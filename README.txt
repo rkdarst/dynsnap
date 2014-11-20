@@ -83,7 +83,9 @@ Options:
 -t N
     Specify column holding time.   Default: 0
 -w N
-    Specify column holding weight: Default: unweighted
+    Specify column holding weight: A value of -1 means that there is
+    no weight column, but calculate using weighted mechanics anyway.
+    Default: unweighted.
 --unordered
     If given, the ordering of other columns does not matter, and lines
     with events "aaa bbb ccc" and "aaa ccc bbb" are considered the
