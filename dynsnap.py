@@ -230,8 +230,8 @@ class SnapshotFinder(object):
             #es1s = set(es1)
             #es2s = set(es2)
             x = self.measure(es1s, es2s)
-            if x == 0:
-                continue
+            #if x == 0:
+            #    continue
             #print dt, len(es1s), len(es2s), x
 
             self._finder_data['dts'].append(dt)
@@ -249,6 +249,17 @@ class SnapshotFinder(object):
                 break
         if i_max is None:
             return None
+        #assert xs[i_max] != xs[-1], "Plateaued value"
+        #assert i_max != len(xs)-1, "Continually increasing value"
+        if (xs[i_max] == xs[-1]
+            #and xs[i_max] == xs[-1]
+            and xs[i_max] == 0
+            and self.old_es is not None):
+            # At this point, we have had an extreme event and we
+            # should restart from zero.
+            self.old_es = None # Remove old interval.  We need a fresh
+                               # restart.
+            return self.find()
 
         #print xs
         dt_max = self.found_dt_max = dts[i_max]
