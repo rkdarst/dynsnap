@@ -11,6 +11,11 @@ class WeightedSet(object):
         for x, w in it:
             if x not in data:    data[x] = w
             else:                data[x] += w
+    @classmethod
+    def _from_data(cls, data):
+        self = cls([])
+        self._data = data
+        return self
     def update(self, it):
         data = self._data
         for x, w in it:
@@ -41,6 +46,18 @@ class WeightedSet(object):
         for x, w in A.iteritems():
             union += max(0,   A[x] - B.get(x, 0))
         return _LenProxy(union)
+    def union(self, other):
+        if len(self) <= len(other):
+            A, B = self._data, other._data
+        else:
+            A, B = other._data, self._data
+        data = dict(B)
+        # A is the smaller set
+        for x, w in A.iteritems():
+            if x not in data:    data[x] = w
+            else:                data[x] += w
+        return self._from_data(data)
+
 def test_weightedset():
     from nose.tools import assert_equal
     A = WeightedSet([('a',1), ('b',2),])
@@ -274,7 +291,7 @@ class SnapshotFinder(object):
             # first round
             if getattr(self.args, 'merge_first', True):
                 # Merge the first two intervals into a big one.
-                self.old_es = es1s | es2s
+                self.old_es = es1s.union(es2s)
                 self.tstart += dt_max  # double interval
                 return tstart, self.tstart
             else:
