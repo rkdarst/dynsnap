@@ -374,6 +374,7 @@ if __name__ == '__main__':
     from itertools import product
     import math
     import numpy
+    import os
     import random
 
     import networkx
@@ -438,6 +439,12 @@ if __name__ == '__main__':
     points = [ ]
     finding_data = [ ]
     if args.output:
+        # Make directory for output, if it doesn't exist already.
+        dir_ = os.path.dirname(args.output)
+        if dir_:
+            if not os.path.isdir(dir_):
+                os.makedirs(dir_)
+        #
         fout_thresh = open(args.output+'.out.txt', 'w')
         fout_full = open(args.output+'.out.J.txt', 'w')
         print >> fout_thresh, '#tlow thigh dt val len(old_es) measure_data'
