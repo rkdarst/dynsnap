@@ -157,11 +157,11 @@ class SnapshotFinder(object):
     dt_max = 1000
     dt_step = 1
     dt_extra = 50
-    weighted = False
     args = None
-    def __init__(self, evs, tstart=None, args=None):
+    def __init__(self, evs, tstart=None, weighted=False, args=None):
         self.evs = evs
         self.args = args
+        self.weighted = weighted
 
         if tstart is not None:
             self.tstart = tstart
@@ -543,11 +543,9 @@ if __name__ == '__main__':
                       grouped=args.grouped)
     print "file loaded"
 
-    finder = SnapshotFinder(evs, tstart=args.tstart, args=args)
+    finder = SnapshotFinder(evs, tstart=args.tstart, args=args,
+                            weighted=bool(args.w))
 
-    if args.w is not None:
-        finder.weighted = True
-    #
     if args.dtextra is not None: finder.dt_extra = args.dtextra
     if args.dtmin   is not None: finder.dt_min   = args.dtmin
     if args.dtmax   is not None: finder.dt_max   = args.dtmax
