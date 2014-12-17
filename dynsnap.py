@@ -484,6 +484,7 @@ class Plotter(object):
         for ts, xs, new_tstart in self.finding_data:
             ls = ax2.plot(ts, xs, '-')
             #ax.axvline(x=new_tstart, color=ls[0].get_color())
+            ax2.annotate(str(new_tstart), xy=(new_tstart, max(xs)))
 
         if callback:
             callback(locals())
