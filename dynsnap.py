@@ -159,8 +159,15 @@ class SnapshotFinder(object):
     dt_extra = 50
     weighted = False
     args = None
-    def __init__(self, evs):
+    def __init__(self, evs, tstart=None, args=None):
         self.evs = evs
+        self.args = args
+
+        if tstart is not None:
+            self.tstart = tstart
+        else:
+            self.tstart = evs.t_min()
+
 
     # Two generalized set-making functions.  These take an iterator
     # over events, and return set objects.  They are separate methods,
@@ -451,13 +458,8 @@ if __name__ == '__main__':
                       grouped=args.grouped)
     print "file loaded"
 
-    finder = SnapshotFinder(evs)
-    finder.args = args
-    # Find tstart
-    if args.tstart:
-        finder.tstart = args.tstart
-    else:
-        finder.tstart = evs.t_min()
+    finder = SnapshotFinder(evs, tstart=args.tstart, args=args)
+
     if args.w is not None:
         finder.weighted = True
     #
