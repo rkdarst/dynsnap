@@ -278,6 +278,11 @@ class SnapshotFinder(object):
             self.old_es = None # Remove old interval.  We need a fresh
                                # restart.
             return self.find()
+            #tlow, thigh = self.find()  # restart algorithm
+            #dt = thigh - tlow
+            #es = self.evs[self.tstart: self.tstart+dt]
+            #es = self._set_make(es)
+            #thigh2 = thigh + (thigh-tlow) # endpoint of merged interval.
 
         #print xs
         dt_max = self.found_dt_max = dts[i_max]
@@ -435,6 +440,8 @@ if __name__ == '__main__':
     if args.dtmax   is not None: finder.dt_max   = args.dtmax
     if args.dtstep  is not None: finder.dt_step  = args.dtstep
 
+    print evs.t_min(), evs.t_max()
+    #evs.dump()
 
     points = [ ]
     finding_data = [ ]
