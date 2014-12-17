@@ -191,8 +191,12 @@ class SnapshotFinder(object):
     # using _make_set).
     def get_first(self, dt):
         """Get a first interval: two intervals"""
-        cursor = self.evs[self.tstart: self.tstart+dt]
-        es1 = self._set_make(cursor)
+        #cursor = self.evs[self.tstart: self.tstart+dt]
+        #es1b = self._set_make(cursor)
+        # cached version
+        es1 = self.get_succesive(dt)
+        #assert es1 == es1b
+
         cursor = self.evs[self.tstart+dt: self.tstart+2*dt]
         es2 = self._set_make(cursor)
         return es1, es2
