@@ -36,7 +36,7 @@ class WeightedSet(object):
                 intersection += min(A[x], B[x])
         return _LenProxy(intersection)
     def __or__(self, other):
-        """Set intersection"""
+        """Set union"""
         if len(self) <= len(other):
             A, B = self._data, other._data
         else:
@@ -161,6 +161,12 @@ class SnapshotFinder(object):
     args = None
     def __init__(self, evs):
         self.evs = evs
+
+    # Two generalized set-making functions.  These take an iterator
+    # over events, and return set objects.  They are separate methods,
+    # so that we can have either unweighted or weighted sets, or even
+    # higher-level ideas.  Returned objects should be able to do
+    # len(a|b), len(a&b), and a.union(b)
     def _set_make(self, cursor):
         if not self.weighted:
             es = set(e for t, e, w in cursor)
@@ -173,13 +179,20 @@ class SnapshotFinder(object):
         else:
             set_.update(set((e,w) for t,e,w in cursor))
 
+    # Interval-getting functions.  These use the internal state
+    # `self.tstart` and the argument dt to return edge sets (made
+    # using _make_set).
     def get_first(self, dt):
+        """Get a first interval: two intervals"""
         cursor = self.evs[self.tstart: self.tstart+dt]
         es1 = self._set_make(cursor)
         cursor = self.evs[self.tstart+dt: self.tstart+2*dt]
         es2 = self._set_make(cursor)
         return es1, es2
     def get_succesive(self, dt):
+        """Get a successive interval.
+
+        self.old_es should be provided."""
         es = None
         if self.old_incremental_es is not None:
             # We can try to use the old edge set to save recreating
@@ -201,11 +214,16 @@ class SnapshotFinder(object):
 
         return es
     def get(self, dt):
+        """Calls either get_first or get_succesive.
+
+        Also, for successive intervals, returns (old_es, next_es)."""
         if self.old_es == None:
             return self.get_first(dt)
         else:
             return self.old_es, self.get_succesive(dt)
 
+    # Different measurement functions: either Jaccard or NMI.  (Note:
+    # NMI is old, was for graphs which is no longer supported).
     def measure_esjacc(self, es1s, es2s):
         union = len(es1s | es2s)
         if union == 0:
@@ -229,7 +247,10 @@ class SnapshotFinder(object):
         return nmi
     measure = measure_esjacc
 
+
+    # This is the core function that does a search.
     def find(self):
+        # Create our range of dts to test.
         all_dts = numpy.arange(self.dt_min, self.dt_max+self.dt_step,
                                self.dt_step)
         # sqlite3 can't handle numpy.int64, convert all to floats.
@@ -269,6 +290,10 @@ class SnapshotFinder(object):
             return None
         #assert xs[i_max] != xs[-1], "Plateaued value"
         #assert i_max != len(xs)-1, "Continually increasing value"
+
+        # In the case below, we have a continually increasing jacc,
+        # which indicates that there was some extreme event.  In this
+        # case, we restart completly.
         if (xs[i_max] == xs[-1]
             #and xs[i_max] == xs[-1]
             and xs[i_max] == 0
@@ -290,6 +315,7 @@ class SnapshotFinder(object):
         es1s, es2s = self.get(dt_max)  # to save correct es2s
         self.measure(es1s, es2s) # rerun to store correct self._measure_data
 
+        # Clean up, save old edge set.
         tstart = self.tstart
         self.tstart = self.tstart + dt_max
         if self.old_es is None:
