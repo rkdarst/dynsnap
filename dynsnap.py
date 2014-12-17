@@ -333,6 +333,14 @@ class SnapshotFinder(object):
                 self.old_es = es1s.union(es2s)
                 self.tstart += dt_max  # double interval
                 self.interval_high = self.tstart
+                # Double dts, since our dt actually represents a
+                # doubled interval.
+                self._finder_data['dts'] = \
+                           numpy.multiply(2, self._finder_data['dts'])
+                self._finder_data['ts'] = \
+                      numpy.subtract(self._finder_data['ts'], tstart)*2+tstart
+                print 'doubling'
+
                 return tstart, self.tstart
             else:
                 # Old (normal) way of handling the first interval.
