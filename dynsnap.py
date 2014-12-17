@@ -325,19 +325,23 @@ class SnapshotFinder(object):
         # Clean up, save old edge set.
         tstart = self.tstart
         self.tstart = self.tstart + dt_max
+        self.interval_low = tstart
         if self.old_es is None:
             # first round
             if getattr(self.args, 'merge_first', True):
                 # Merge the first two intervals into a big one.
                 self.old_es = es1s.union(es2s)
                 self.tstart += dt_max  # double interval
+                self.interval_high = self.tstart
                 return tstart, self.tstart
             else:
                 # Old (normal) way of handling the first interval.
                 self.old_es = es1s
+                self.interval_high = self.tstart
                 return tstart, self.tstart
         else:
             self.old_es = es2s
+            self.interval_high = self.tstart
             return tstart, self.tstart
 
         #print "  %4d %3d %3d %s"%(self.tstart, dt_max, i_max, len(dts))
@@ -406,6 +410,53 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
     ev = Events(cache_fname)
     ev.add_events(_iter())
     return ev
+
+
+class Plotter(object):
+    def __init__(self, finder, args=None):
+        self.finder = finder
+        self.args = args
+        self.points = [ ]
+        self.finding_data = [ ]
+    def add(self, finder):
+        """Record state, for used in plotting"""
+        tlow  = finder.interval_low
+        thigh = finder.interval_high
+        self.points.append((tlow,  thigh-tlow))
+        self.points.append((thigh, thigh-tlow))
+        self.finding_data.append((finder._finder_data['ts'],
+                               finder._finder_data['xs'],
+                               finder.tstart))
+    def plot(self, path, callback=None):
+        """Do plotting.  Save to path.[pdf,png]"""
+        try:
+            import pcd.support.matplotlibutil as mplutil
+            raise ImportError
+        except ImportError:
+            import mplutil
+        fname = path + '.[pdf,png]'
+        fig, extra = mplutil.get_axes(fname, figsize=(10, 10),
+                                      ret_fig=True)
+        ax = fig.add_subplot(2, 1, 1)
+        ax2 = fig.add_subplot(2, 1, 2)
+        ax.set_xlabel('time (also snapshots intervals)')
+        ax.set_ylabel('Snapshot length (t)')
+        ax.set_xlabel('time')
+        ax2.set_ylabel('Jaccard score (or measure)')
+        ax.set_xlim(self.finder.evs.t_min(), self.finder.evs.t_max())
+        ax2.set_xlim(self.finder.evs.t_min(), self.finder.evs.t_max())
+
+        x, y = zip(*self.points)
+        ls = ax.plot(x, y, '-o')
+        for ts, xs, new_tstart in self.finding_data:
+            ls = ax2.plot(ts, xs, '-')
+            #ax.axvline(x=new_tstart, color=ls[0].get_color())
+
+        if callback:
+            callback(locals())
+
+        mplutil.save_axes(fig, extra)
+
 
 
 if __name__ == '__main__':
@@ -484,6 +535,8 @@ if __name__ == '__main__':
         fout_full = open(args.output+'.out.J.txt', 'w')
         print >> fout_thresh, '#tlow thigh dt val len(old_es) measure_data'
         print >> fout_full, '#t val dt measure_data'
+    if args.plot:
+        plotter = Plotter(finder, args=args)
     while True:
         x = finder.find()
         if x is None:
@@ -493,11 +546,6 @@ if __name__ == '__main__':
         dt = thigh-tlow
         val = finder.found_x_max
         print tlow, thigh, val, dt
-        finding_data.append((finder._finder_data['ts'],
-                             finder._finder_data['xs'],
-                             finder.tstart))
-        points.append((tlow,  thigh-tlow))
-        points.append((thigh, thigh-tlow))
         # Write and record informtion
         if args.output:
             print >> fout_thresh, tlow, thigh, dt, val, len(finder.old_es), \
@@ -514,32 +562,9 @@ if __name__ == '__main__':
             print >> fout_full
             fout_full.flush()
 
-
+        if args.plot:
+            plotter.add(finder)
 
     if args.plot:
-        try:
-            import pcd.support.matplotlibutil as mplutil
-            raise ImportError
-        except ImportError:
-            import mplutil
-        fname = args.output+'.[pdf,png]'
-        fig, extra = mplutil.get_axes(fname, figsize=(10, 10),
-                                      ret_fig=True)
-        ax = fig.add_subplot(2, 1, 1)
-        ax2 = fig.add_subplot(2, 1, 2)
-        ax.set_xlabel('time (also snapshots intervals)')
-        ax.set_ylabel('Snapshot length (t)')
-        ax.set_xlabel('time')
-        ax2.set_ylabel('Jaccard score (or measure)')
-        ax.set_xlim(evs.t_min(), evs.t_max())
-        ax2.set_xlim(evs.t_min(), evs.t_max())
-
-        x, y = zip(*points)
-        ls = ax.plot(x, y, '-o')
-        for ts, xs, new_tstart in finding_data:
-            ls = ax2.plot(ts, xs, '-')
-            #ax.axvline(x=new_tstart, color=ls[0].get_color())
-        mplutil.save_axes(fig, extra)
-
-
+        plotter.plot(args.output)
 
