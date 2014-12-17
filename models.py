@@ -3,7 +3,8 @@ import math
 import numpy
 import random
 
-rand = lambda: random.uniform(0, 1)
+# convenience function
+rand = lambda rng: rng.uniform(0, 1)
 
 def group_by_t(it):
     """Transform events iterator to group format.
@@ -19,49 +20,58 @@ def group_by_t(it):
             last_events = [ ]
         last_events.append(e)
     yield last_t, last_events
+def get_rng(seed):
+    """Helper function to get random number generator state with seed."""
+    return random.Random(seed)
 
-def toy101(args):
+
+
+def toy101(**kwargs):
     for t in range(0, 100):
         events = [0, 1, 2, 3, 4, 5]
         for e in sorted(events):
             yield t, e
 
-def toy102(args):
+def toy102(**kwargs):
     for t in range(0, 100):
         generation = t // 10
         events = range(generation*6, (generation+1)*6)
         for e in sorted(events):
             yield t, e
 
-def toy103(args):
+def toy103(seed=None, **kwargs):
+    rng = get_rng(seed)
     n = 50
     s = 25
     for t in range(0, 100):
         generation = t // 10
         events = range(generation*n, (generation+1)*n)
-        events2 = random.sample(events, s)
+        events2 = rng.sample(events, s)
         for e in sorted(events2):
             yield t, e
 
 
-def periodic(args):
-    p = .5   # Activated edges exist exist with this probability
-    q = .2   # Fraction of activated edges
-    c_scale = .02  # How many edges change per step?
-    c_min = 0.00
-    tau = 100.
-    t_jump = 300
-    t_max = 1000
+def periodic(N=10000, p=.2, q=.2, c_scale=.01,
+             t_jump=None, t_max=1000, tau=200.,
+             seed=None, **kwargs):
+    """
 
-    events = list(range(args.NN))
+    p: Activated edges exist exist with this probability
+    q: Fraction of activated edges
+    c_scale: How many edges change per step?
+    """
+    rng = get_rng(seed)
+    c_min = 0.00
+
+    events = list(range(N))
     edge_p = { }
     for e in events:
-        edge_p[e] = p   if rand() < q   else 0.0
+        edge_p[e] = p   if rand(rng) < q   else 0.0
 
     for t in range(t_max):
         # build up all time scales.
         for e in events:
-            if rand() < edge_p[e]:
+            if rand(rng) < edge_p[e]:
                 yield t, e
 
         # Randomly perturb some edges
@@ -70,8 +80,8 @@ def periodic(args):
             c = 1.0
         #print t, c
         for e in events:
-            if rand() < c:
-                edge_p[e] = p   if rand() < q   else 0.0
+            if rand(rng) < c:
+                edge_p[e] = p   if rand(rng) < q   else 0.0
 
 
 if __name__ == "__main__":
@@ -88,9 +98,9 @@ if __name__ == "__main__":
 
 
 
-    it = globals()[args.model](args)
+    it = globals()[args.model](**args.__dict__)
 
-    if args.grouped:
+    if args['grouped']:
         it = group_by_t(it)
         for t, events in it:
             print t, " ".join(str(x) for x in events)
