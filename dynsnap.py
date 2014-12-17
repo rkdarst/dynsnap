@@ -255,46 +255,64 @@ class SnapshotFinder(object):
     measure = measure_esjacc
 
 
-    # This is the core function that does a search.
-    def find(self):
+    def get_all_dts(self):
+        """Get all dt values we will search."""
         # Create our range of dts to test.
         all_dts = numpy.arange(self.dt_min, self.dt_max+self.dt_step,
                                self.dt_step)
         # sqlite3 can't handle numpy.int64, convert all to floats.
         all_dts = [ eval(repr(x)) for x in all_dts ]
+        return all_dts
+    def find_best_dt(self, dt, dts, xs):
+        i_max = numpy.argmax(xs)
+        if dt > dts[i_max]+self.dt_extra:
+            e = self.StopSearch()
+            e.i_max = i_max
+            raise e
+        return i_max
+    class StopSearch(BaseException):
+        pass
 
+    # This is the core function that does a search.
+    def find(self):
+        """Core snapshot finding method.
+
+        Returns (low, high) values."""
         dts = [ ]
         xs = [ ]
         self._finder_data = dict(xs=[], ts=[], dts=[],
                                  measure_data=[])
-        es1max = es2max = None
         i_max = None
-        for i, dt in enumerate(all_dts):
+        try:
+          for i, dt in enumerate(self.get_all_dts()):
+            # Get our new event sets for old and new intervals.
             es1s, es2s = self.get(dt)
+            # Skip if there are no events in either interval (we don't
+            # expect most measures to be defined in this case.)
             if len(es1s) == 0 or len(es2s) == 0:
                 continue
-            #es1s = set(es1)
-            #es2s = set(es2)
             x = self.measure(es1s, es2s)
-            #if x == 0:
-            #    continue
-            #print dt, len(es1s), len(es2s), x
+            dts.append(dt)
+            xs.append(x)
 
+            # Store data for later plotting.
             self._finder_data['dts'].append(dt)
             self._finder_data['ts'].append(self.tstart+dt)
             self._finder_data['xs'].append(x)
             self._finder_data['measure_data'].append(self._measure_data)
-            dts.append(dt)
-            xs.append(x)
 
-            i_max = numpy.argmax(xs)
-            #if i_max == len(dts)-1:
-            #    es1max = set(es1s)
-            #    es2max = set(es2s)
-            if dt > dts[i_max]+self.dt_extra:
-                break
+            # Find best dt.  This can raise self.StopSearch in order
+            # to terminate the search early (in that case it should
+            # set i_max as an attribute of the exception.
+            i_max = self.find_best_dt(dt, dts, xs)
+        except self.StopSearch as e:
+            i_max = e.i_max
+
+        # We are completly done with the interval.  break the loop.
         if i_max is None:
             return None
+
+
         #assert xs[i_max] != xs[-1], "Plateaued value"
         #assert i_max != len(xs)-1, "Continually increasing value"
 
@@ -310,24 +328,22 @@ class SnapshotFinder(object):
             self.old_es = None # Remove old interval.  We need a fresh
                                # restart.
             return self.find()
-            #tlow, thigh = self.find()  # restart algorithm
-            #dt = thigh - tlow
-            #es = self.evs[self.tstart: self.tstart+dt]
-            #es = self._set_make(es)
-            #thigh2 = thigh + (thigh-tlow) # endpoint of merged interval.
 
         #print xs
         dt_max = self.found_dt_max = dts[i_max]
         x_max  = self.found_x_max  = xs[i_max]
-        es1s, es2s = self.get(dt_max)  # to save correct es2s
+        # best es2s and best self._measuer_data is overwritten in the
+        # loop above.  Rerun the lines below to save this again.
+        es1s, es2s = self.get(dt_max)
         self.measure(es1s, es2s) # rerun to store correct self._measure_data
 
         # Clean up, save old edge set.
-        tstart = self.tstart
-        self.tstart = self.tstart + dt_max
-        self.interval_low = tstart
+        old_tstart = self.interval_low = self.tstart
+        self.tstart = old_tstart + dt_max
+
+
         if self.old_es is None:
-            # first round
+            # first round, comparing two expanding intervals.
             if getattr(self.args, 'merge_first', True):
                 # Merge the first two intervals into a big one.
                 self.old_es = es1s.union(es2s)
@@ -338,21 +354,26 @@ class SnapshotFinder(object):
                 self._finder_data['dts'] = \
                            numpy.multiply(2, self._finder_data['dts'])
                 self._finder_data['ts'] = \
-                      numpy.subtract(self._finder_data['ts'], tstart)*2+tstart
+                      numpy.subtract(self._finder_data['ts'], old_tstart) \
+                        * 2+old_tstart
                 print 'doubling'
 
-                return tstart, self.tstart
+                return old_tstart, self.tstart
             else:
                 # Old (normal) way of handling the first interval.
                 self.old_es = es1s
                 self.interval_high = self.tstart
-                return tstart, self.tstart
+                return old_tstart, self.tstart
         else:
+            # Normal continuing process.
             self.old_es = es2s
             self.interval_high = self.tstart
-            return tstart, self.tstart
+            return old_tstart, self.tstart
 
         #print "  %4d %3d %3d %s"%(self.tstart, dt_max, i_max, len(dts))
+
+
+
 
 import ast
 import os
