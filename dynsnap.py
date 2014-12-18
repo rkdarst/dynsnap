@@ -1,5 +1,6 @@
 # Richard Darst, November 2014
 
+import argparse
 import sqlite3
 
 class _LenProxy(object):
@@ -157,9 +158,11 @@ class SnapshotFinder(object):
     dt_max = 1000
     dt_step = 1
     dt_extra = 50
-    args = None
-    def __init__(self, evs, tstart=None, weighted=False, args=None):
+    args = {}
+    def __init__(self, evs, tstart=None, weighted=False, args={}):
         self.evs = evs
+        if isinstance(args, argparse.Namespace):
+            args = args.__dict__
         self.args = args
         self.weighted = weighted
 
@@ -348,7 +351,7 @@ class SnapshotFinder(object):
 
         if self.old_es is None:
             # first round, comparing two expanding intervals.
-            if getattr(self.args, 'merge_first', True):
+            if self.args.get('merge_first', True):
                 # Merge the first two intervals into a big one.
                 self.old_es = es1s.union(es2s)
                 self.tstart += dt_max  # double interval
@@ -503,7 +506,6 @@ if __name__ == '__main__':
 
     import networkx
 
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="benchmark model to simulate",)
     parser.add_argument("output", help="Output prefix", nargs='?')
