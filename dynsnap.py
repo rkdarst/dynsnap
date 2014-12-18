@@ -469,7 +469,8 @@ class Plotter(object):
         self.points.append((thigh, thigh-tlow))
         self.finding_data.append((finder._finder_data['ts'],
                                finder._finder_data['xs'],
-                               finder.tstart))
+                               finder.interval_low,
+                               finder.interval_high))
     def plot(self, path, callback=None):
         """Do plotting.  Save to path.[pdf,png]"""
         try:
@@ -491,11 +492,11 @@ class Plotter(object):
 
         x, y = zip(*self.points)
         ls = ax.plot(x, y, '-o')
-        for ts, xs, new_tstart in self.finding_data:
+        for ts, xs, tlow, thigh in self.finding_data:
             ls = ax2.plot(ts, xs, '-')
             #ax.axvline(x=new_tstart, color=ls[0].get_color())
             if self.args.get('annotate_peaks', True):
-                ax2.annotate(str(new_tstart), xy=(new_tstart, max(xs)))
+                ax2.annotate(str(thigh), xy=(thigh, max(xs)))
 
         if callback:
             callback(locals())
