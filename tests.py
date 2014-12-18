@@ -1,7 +1,10 @@
-from nose.tools import *
-
+import fnmatch
+from functools import partial
 import os
+import re
 import sys
+
+from nose.tools import *
 
 import dynsnap
 import models
@@ -54,6 +57,15 @@ class BaseTest(object):
                     title += '\n'+kwargs['desc']
                 lcls['fig'].suptitle(title)
 
+                # plot theoretical value
+                if hasattr(self, 'theory'):
+                    func = self.theory()
+
+                    dat = lcls['self'].finding_data[0]
+                    ts, xs, tlow, thigh = dat
+                    predicted_xs = [ func(t-tlow) for t in ts ]
+                    lcls['ax2'].plot(ts, predicted_xs, 'o', color='red')
+
             plotter.plot(output, callback=cb)
 
 
@@ -75,6 +87,11 @@ class drift1A(T):
     m=models.drift; ma=dict(seed=13, merge_first=False)
 class drift1B(T):
     m=models.drift; ma=dict(seed=13, c=0.02, merge_first=False)
+class drift1C(T):
+    m=models.drift; ma=dict(seed=13, c=0.00, p=.2, merge_first=False,
+                            t_max=100, N=10000)
+    def theory(self):
+        return lambda dt: models.J1(dt, Pe=partial(models.Pe, self.ma['p']))
 
 class periodic1A(T):
     m=models.periodic; ma={'N':1000, 'seed':13}; ann_pk=False
@@ -98,9 +115,8 @@ if __name__ == '__main__':
         name = test.__name__
 
         # Skip tests we don't want to run, if we specify this thing.
-        if to_run and name not in to_run:
+        if to_run and not any(re.search(x, name) for x in to_run):
             continue
-
 
         output = out_path+'test-'+name
         dirname = os.path.dirname(out_path)

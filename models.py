@@ -109,6 +109,15 @@ def periodic(N=10000, p=.2, q=.2, c_scale=.01,
                 edge_p[e] = p   if rand(rng) < q   else 0.0
 
 
+#
+# Tools for theoretically modeling distributions
+#
+def Pe(p, dt):
+    return 1.-((1.-p)**dt)
+def J1(dt, Pe):
+    return Pe(dt) / float(2-Pe(dt))
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
