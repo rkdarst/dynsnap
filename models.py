@@ -51,6 +51,31 @@ def toy103(seed=None, **kwargs):
             yield t, e
 
 
+def drift(N=1000, p=.2, c=.01,
+          t_max=1000, seed=None, **kwargs):
+    rng = get_rng(seed)
+    next_eid = [ -1 ]
+    def nextevent():
+        next_eid[0] += 1
+        return next_eid[0]
+
+    events = set(xrange(N))
+    for t in xrange(t_max):
+        # Yield events that occur now.
+        for e in events:
+            if rand(rng) < p:
+                yield t, e
+
+        # Change events
+        changes = [ ]
+        for e in list(events):
+            if rand(rng) < c:
+                changes.append(e)
+        for e in changes:
+            events.remove(e)
+            events.add(nextevent())
+
+
 def periodic(N=10000, p=.2, q=.2, c_scale=.01,
              t_jump=None, t_max=1000, tau=200.,
              seed=None, **kwargs):

@@ -25,7 +25,8 @@ class BaseTest(object):
         events.add_events((t, e, 1) for t,e in model(**self.ma))
 
         finder = dynsnap.SnapshotFinder(events,
-                                        weighted=self.ma.get('w'))
+                                        weighted=self.ma.get('w'),
+                                        args=self.ma)
 
         if plot:
             plotter = dynsnap.Plotter(finder,
@@ -69,6 +70,11 @@ class toy103B(T):
 class toy103N(T):
     m=models.toy101; ma={'seed':15}
     desc="upper bound too high"
+
+class drift1A(T):
+    m=models.drift; ma=dict(seed=13, merge_first=False)
+class drift1B(T):
+    m=models.drift; ma=dict(seed=13, c=0.02, merge_first=False)
 
 class periodic1A(T):
     m=models.periodic; ma={'N':1000, 'seed':13}; ann_pk=False
