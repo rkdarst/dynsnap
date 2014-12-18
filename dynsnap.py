@@ -265,11 +265,18 @@ class SnapshotFinder(object):
     def get_all_dts(self):
         """Get all dt values we will search."""
         # Create our range of dts to test.
-        all_dts = numpy.arange(self.dt_min, self.dt_max+self.dt_step,
-                               self.dt_step)
+        #all_dts = numpy.arange(self.dt_min, self.dt_max+self.dt_step,
+        #                       self.dt_step)
         # sqlite3 can't handle numpy.int64, convert all to floats.
-        all_dts = [ eval(repr(x)) for x in all_dts ]
-        return all_dts
+        #all_dts = [ eval(repr(x)) for x in all_dts ]
+        #return all_dts
+        dt = self.dt_min
+        stop = self.dt_max+self.dt_step
+        step = self.dt_step
+        while True:
+            yield dt
+            if dt > stop: break
+            dt += step
     def find_best_dt(self, dt, dts, xs):
         i_max = numpy.argmax(xs)
         if dt > dts[i_max]+self.dt_extra:
