@@ -277,15 +277,25 @@ class SnapshotFinder(object):
             yield dt
             if dt > stop: break
             dt += step
-    def find_best_dt(self, dt, dts, xs):
+    class StopSearch(BaseException):
+        pass
+    def find_best_dt_shortest(self, dt, dts, xs):
         i_max = numpy.argmax(xs)
         if dt > dts[i_max]+self.dt_extra:
             e = self.StopSearch()
             e.i_max = i_max
             raise e
         return i_max
-    class StopSearch(BaseException):
-        pass
+    def find_best_dt_longest(self, dt, dts, xs):
+        xs_reversed = xs[::-1]
+        i_max = numpy.argmax(xs_reversed)
+        x_max = len(xs)-1-i_max   # undo the reversal
+        if dt > dts[i_max]+self.dt_extra:
+            e = self.StopSearch()
+            e.i_max = i_max
+            raise e
+        return i_max
+    find_best_dt = find_best_dt_shortest
 
     # This is the core function that does a search.
     def find(self):
