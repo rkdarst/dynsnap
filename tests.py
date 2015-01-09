@@ -15,6 +15,7 @@ class BaseTest(object):
     #ma = {'arg': 'value' }
     #desc = 'description for under subplot'
     ann_pk = True   # Annotate the peaks in the output plot?
+    ma = { }
 
 
     def run(self, output, plot=True):
@@ -83,6 +84,8 @@ class toy103N(T):
     m=models.toy101; ma={'seed':15}
     desc="upper bound too high"
 
+class drift1Am(T):
+    m=models.drift; ma=dict(seed=13, merge_first=True)
 class drift1A(T):
     m=models.drift; ma=dict(seed=13, merge_first=False)
 class drift1B(T):
@@ -92,6 +95,9 @@ class drift1C(T):
                             t_max=100, N=10000)
     def theory(self):
         return lambda dt: models.J1(dt, Pe=partial(models.Pe, self.ma['p']))
+class drift1D(T):
+    m=models.drift; ma=dict(seed=13, t_crit=(200, 500))
+
 
 class periodic1A(T):
     m=models.periodic; ma={'N':1000, 'seed':13}; ann_pk=False
@@ -99,6 +105,11 @@ class periodic1A(T):
 class periodic1Aw(T):
     m=models.periodic; ma={'N':1000, 'seed':13, 'w':True}; ann_pk=False
     desc='periodic - weighted'
+class periodic1B(T):
+    m=models.periodic; ma={'N':1000, 'seed':13, 't_crit':(200, 500)}
+    ann_pk=False
+    desc='periodic'
+
 
 
 all_tests = [x for name, x in globals().items()
@@ -111,7 +122,7 @@ if __name__ == '__main__':
     to_run = sys.argv[1:]
     kwargs = dict(plot=True)
 
-    for test in all_tests:
+    for test in sorted(all_tests):
         name = test.__name__
 
         # Skip tests we don't want to run, if we specify this thing.
