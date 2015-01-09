@@ -52,15 +52,21 @@ def toy103(seed=None, **kwargs):
 
 
 def drift(N=1000, p=.2, c=.01,
-          t_max=1000, seed=None, **kwargs):
+          t_max=1000, seed=None,
+          t_crit=(), **kwargs):
     rng = get_rng(seed)
-    next_eid = [ -1 ]
+    t_crit = set(t_crit) # critical times: all events change
+    next_eid = [ N-1 ]  # events 0--(N-1) are in the initial set
     def nextevent():
         next_eid[0] += 1
         return next_eid[0]
 
     events = set(xrange(N))
     for t in xrange(t_max):
+        # critical events - all events change *before* t
+        if t in t_crit:
+            events = set(nextevent() for _ in xrange(N))
+
         # Yield events that occur now.
         for e in events:
             if rand(rng) < p:
@@ -77,7 +83,7 @@ def drift(N=1000, p=.2, c=.01,
 
 
 def periodic(N=10000, p=.2, q=.2, c_scale=.01,
-             t_jump=None, t_max=1000, tau=200.,
+             t_crit=(), t_max=1000, tau=200.,
              seed=None, **kwargs):
     """
 
@@ -87,6 +93,7 @@ def periodic(N=10000, p=.2, q=.2, c_scale=.01,
     """
     rng = get_rng(seed)
     c_min = 0.00
+    t_crit = set(t_crit)
 
     events = list(range(N))
     edge_p = { }
@@ -101,7 +108,7 @@ def periodic(N=10000, p=.2, q=.2, c_scale=.01,
 
         # Randomly perturb some edges
         c = c_min + c_scale * (.5 - .5 * math.cos(2*math.pi * t / tau))
-        if t == t_jump:
+        if t+1 in t_crit:
             c = 1.0
         #print t, c
         for e in events:
