@@ -1,6 +1,7 @@
 # Richard Darst, November 2014
 
 import argparse
+import datetime
 import sqlite3
 
 from events import Events, load_events
@@ -434,7 +435,11 @@ if __name__ == '__main__':
     if args.dtmax   is not None: finder.dt_max   = args.dtmax
     if args.dtstep  is not None: finder.dt_step  = args.dtstep
 
-    print evs.t_min(), evs.t_max()
+    def format_t(t):
+        return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
+    format_t_log = format_t
+
+    print format_t(evs.t_min()), format_t(evs.t_max())
     #evs.dump()
 
     points = [ ]
@@ -460,19 +465,21 @@ if __name__ == '__main__':
         thigh = x[1]
         dt = thigh-tlow
         val = finder.found_x_max
-        print tlow, thigh, val, dt
+        print format_t(tlow), format_t(thigh), val, dt
         # Write and record informtion
         if args.output:
-            print >> fout_thresh, tlow, thigh, dt, val, len(finder.old_es), \
+            print >> fout_thresh, format_t_log(tlow), format_t_log(thigh), \
+                                  dt, val, len(finder.old_es), \
                   finder._measure_data
-            print >> fout_full, '# t1=%s t2=%s dt=%s'%(tlow, thigh, thigh-tlow)
+            print >> fout_full, '# t1=%s t2=%s dt=%s'%(format_t_log(tlow), format_t_log(thigh),
+                                                       thigh-tlow)
             print >> fout_full, '# J=%s'%val
             print >> fout_full, '# len(old_es)=%s'%len(finder.old_es)
             #print >> fout, '# len(old_es)=%s'%len(finder.old_es)
             for i, t in enumerate(finder._finder_data['ts']):
-                print >> fout_full, t, \
+                print >> fout_full, finder._finder_data['dts'][i], \
+                                    format_t_log(t), \
                                     finder._finder_data['xs'][i], \
-                                    finder._finder_data['dts'][i], \
                                     finder._finder_data['measure_data'][i]
             print >> fout_full
             fout_full.flush()
