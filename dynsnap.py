@@ -456,7 +456,7 @@ if __name__ == '__main__':
         print >> fout_thresh, '#tlow thigh dt val len(old_es) measure_data'
         print >> fout_full, '#t val dt measure_data'
     if args.plot:
-        plotter = Plotter(finder, args=args)
+        plotter = Plotter(finder, args=args.__dict__)
     while True:
         x = finder.find()
         if x is None:
