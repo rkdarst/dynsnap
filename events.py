@@ -94,26 +94,33 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
         else:
             f = open(fname)
         for lineno, line in enumerate(f):
-            if lineno > 1000000:
-                break
+            #if lineno > 10000000:
+            #    break
             #line = line.split('#', 1)[0]
             line = line.strip()
             if line.startswith('#'): continue
             line = line.split()
-            line_orig = tuple(line)
+            #line_orig = tuple(line)
             if not line: continue
-            t = ast.literal_eval(line.pop(col_time))
-            col_weight2 = col_weight # modified in this scope so needs
-                                     # local copy
+            t = ast.literal_eval(line[col_time])
+            #col_weight2 = col_weight # modified in this scope so needs
+            #                         # local copy
             if col_weight is not None and col_weight != -1:
                 assert col_weight != col_time, ("weight column specified "
                                                 "same as time column.")
-                if col_weight > col_time:
-                    # We removed one column, need to adjust.
-                    col_weight2 -= 1
-                w = ast.literal_eval(line.pop(col_weight2))
+                #if col_weight > col_time:
+                #    # We removed one column, need to adjust.
+                #    col_weight2 -= 1
+                w = ast.literal_eval(line[col_weight])
             else:
                 w = 1.0
+
+            if cols_data:
+                line = tuple( line[i] for i in cols_data )
+                #print cols_data, line
+            else:
+                line = tuple( x for i,x in enumerate(line) if i!=col_time and i!=col_weight )
+
             if grouped:
                 # each line contains many different events.  Handle
                 # his case, then coninue the loop.
@@ -125,9 +132,6 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                         events[e] = i
                     yield t, i, w
                 continue
-            if cols_data:
-                line = [line_orig[i] for i in cols_data ]
-                #print cols_data, line
 
             if unordered:
                 e = frozenset(line)
