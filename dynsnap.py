@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+from math import log10
 import sqlite3
 
 from events import Events, load_events
@@ -89,7 +90,9 @@ class SnapshotFinder(object):
     dt_step = 1
     dt_extra = 50
     args = {}
-    def __init__(self, evs, tstart=None, weighted=False, args={}):
+    def __init__(self, evs, tstart=None, weighted=False,
+                 dtmode='linear',
+                 args={}):
         self.evs = evs
         if isinstance(args, argparse.Namespace):
             args = args.__dict__
@@ -101,6 +104,9 @@ class SnapshotFinder(object):
         else:
             self.tstart = evs.t_min()
 
+        if dtmode == 'linear':    self.iter_all_dts = self.iter_all_dts_linear
+        elif dtmode == 'log':     self.iter_all_dts = self.iter_all_dts_log
+        else:                     raise ValueError("Unknown dtmode: %s"%dtmode)
 
     # Two generalized set-making functions.  These take an iterator
     # over events, and return set objects.  They are separate methods,
@@ -192,7 +198,7 @@ class SnapshotFinder(object):
     measure = measure_esjacc
 
 
-    def get_all_dts(self):
+    def iter_all_dts_linear(self):
         """Get all dt values we will search."""
         # Create our range of dts to test.
         #all_dts = numpy.arange(self.dt_min, self.dt_max+self.dt_step,
@@ -207,11 +213,24 @@ class SnapshotFinder(object):
             yield dt
             if dt > stop: break
             dt += step
+    def iter_all_dts_log(self):
+        dt = 1
+        while True:
+            yield dt
+            dt += int(10**int(log10(dt)))
+            #if dt > self.dt_max: break
+
+    iter_all_dts = iter_all_dts_linear
     class StopSearch(BaseException):
         pass
     def find_best_dt_shortest(self, dt, dts, xs):
         i_max = numpy.argmax(xs)
-        if dt > dts[i_max]+self.dt_extra:
+
+        dt_extra_ = self.dt_extra
+        if not dt_extra_:
+            dt_extra_ = 10*dts[i_max]
+
+        if dt > dts[i_max] + dt_extra_:
             e = self.StopSearch()
             e.i_max = i_max
             raise e
@@ -220,7 +239,13 @@ class SnapshotFinder(object):
         xs_reversed = xs[::-1]
         i_max = numpy.argmax(xs_reversed)
         x_max = len(xs)-1-i_max   # undo the reversal
-        if dt > dts[i_max]+self.dt_extra:
+        raise NotImplementedError("this has bugs") # i_max not updated
+
+        dt_extra_ = self.dt_extra
+        if not dt_extra_:
+            dt_extra_ = 2*dt
+
+        if dt > dts[i_max] + dt_extra_:
             e = self.StopSearch()
             e.i_max = i_max
             raise e
@@ -238,7 +263,7 @@ class SnapshotFinder(object):
                                  measure_data=[])
         i_max = None
         try:
-          for i, dt in enumerate(self.get_all_dts()):
+          for i, dt in enumerate(self.iter_all_dts()):
             # Get our new event sets for old and new intervals.
             es1s, es2s = self.get(dt)
             # Skip if there are no events in either interval (we don't
@@ -415,7 +440,8 @@ if __name__ == '__main__':
     parser.add_argument("--dtmin", type=float,)
     parser.add_argument("--dtmax", type=float,)
     parser.add_argument("--dtstep", type=float,)
-    parser.add_argument("--dtextra", type=float,)
+    parser.add_argument("--dtextra", type=float, default=None)
+    parser.add_argument("--dtmode", default='linear')
 
     args = parser.parse_args()
     #print args
@@ -428,7 +454,8 @@ if __name__ == '__main__':
     print "file loaded"
 
     finder = SnapshotFinder(evs, tstart=args.tstart, args=args,
-                            weighted=bool(args.w))
+                            weighted=bool(args.w),
+                            dtmode=args.dtmode)
 
     if args.dtextra is not None: finder.dt_extra = args.dtextra
     if args.dtmin   is not None: finder.dt_min   = args.dtmin
