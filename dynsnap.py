@@ -410,15 +410,17 @@ class Plotter(object):
         ax.set_ylabel('Snapshot length (t)')
         ax.set_xlabel('time')
         ax2.set_ylabel('Jaccard score (or measure)')
-        ax.set_xlim(self.finder.evs.t_min(), self.finder.evs.t_max())
-        ax2.set_xlim(self.finder.evs.t_min(), self.finder.evs.t_max())
 
         x, y = zip(*self.points)
+
+        ax.set_xlim(x[0], x[-1])
+        ax2.set_xlim(x[0], x[-1])
+
         ls = ax.plot(x, y, '-o')
         for ts, xs, tlow, thigh in self.finding_data:
             ls = ax2.plot(ts, xs, '-')
             #ax.axvline(x=new_tstart, color=ls[0].get_color())
-            if self.args.get('annotate_peaks', True):
+            if self.args.get('annotate_peaks', False):
                 ax2.annotate(str(thigh), xy=(thigh, max(xs)))
 
         if callback:
@@ -434,6 +436,7 @@ if __name__ == '__main__':
     import numpy
     import os
     import random
+    import time
 
     import networkx
 
@@ -530,6 +533,9 @@ if __name__ == '__main__':
     if args.plot:
         plotter = Plotter(finder, args=args.__dict__)
 
+
+    time_last_plot = time.time()
+
     try:
       while True:
         x = finder.find()
@@ -560,6 +566,10 @@ if __name__ == '__main__':
 
         if args.plot:
             plotter.add(finder)
+            # Plot a checkpoint if we are taking a long time.
+            if time.time() > time_last_plot + 300:
+                plotter.plot(args.output)
+                time_last_plot = time.time()
     except KeyboardInterrupt:
         # finalize plotting then re-raise.
         if args.plot:
