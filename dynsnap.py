@@ -85,28 +85,39 @@ import numpy
 class SnapshotFinder(object):
     old_es = None   # None on first round
     old_incremental_es = None
-    dt_min = 1
-    dt_max = 1000
-    dt_step = 1
-    dt_extra = 50
-    args = {}
-    def __init__(self, evs, tstart=None, weighted=False,
-                 dtmode='linear',
-                 args={}):
+
+    def __init__(self, evs, tstart=None, tstop=None, weighted=False,
+                 dtmode='linear', maxmode='shortest',
+                 args={},
+                 dt_min=1, dt_max=1000, dt_step=1, dt_extra=50,
+                 log_dt_max=None,
+                 ):
         self.evs = evs
         if isinstance(args, argparse.Namespace):
             args = args.__dict__
         self.args = args
         self.weighted = weighted
 
-        if tstart is not None:
-            self.tstart = tstart
-        else:
-            self.tstart = evs.t_min()
+        if tstart is not None:    self.tstart = tstart
+        else:                     self.tstart = evs.t_min()
+        if tstop is not None:     self.tstop  = tstop
+        else:                     self.tstop  = evs.t_max()
 
         if dtmode == 'linear':    self.iter_all_dts = self.iter_all_dts_linear
         elif dtmode == 'log':     self.iter_all_dts = self.iter_all_dts_log
         else:                     raise ValueError("Unknown dtmode: %s"%dtmode)
+
+        if   maxmode == 'shortest':  self.pick_best_dt = self.pick_best_dt_shortest
+        elif maxmode == 'longest':   self.pick_best_dt = self.pick_best_dt_longest
+        elif maxmode == 'greedy':    self.pick_best_dt = self.pick_best_dt_greedy
+        else:                        raise ValueError("Unknown maxmode: %s"%maxmode)
+
+        self.dt_min     = dt_min
+        self.dt_max     = dt_max
+        self.dt_step    = dt_step
+        self.dt_extra   = dt_extra
+        self.log_dt_max = log_dt_max
+
 
     # Two generalized set-making functions.  These take an iterator
     # over events, and return set objects.  They are separate methods,
@@ -215,27 +226,33 @@ class SnapshotFinder(object):
             dt += step
     def iter_all_dts_log(self):
         dt = 1
+        log_scale = -1  # 0 = 1,2,3,..10,20,..100,200
+                        #-1 = 1,2,..10,11...100,110,333
         while True:
+            #print dt
             yield dt
-            dt += int(10**int(log10(dt)))
-            #if dt > self.dt_max: break
+            dt += int(10**( max(0, int(log10(dt))+log_scale)  ))
+            if self.log_dt_max and dt > self.log_dt_max: break
+            if self.tstart + dt > self.tstop: break
 
     iter_all_dts = iter_all_dts_linear
     class StopSearch(BaseException):
-        pass
-    def find_best_dt_shortest(self, dt, dts, xs):
+        def __init__(self, i_max, *args, **kwargs):
+            self.i_max = i_max
+            return super(self.__class__, self).__init__(*args, **kwargs)
+
+    def pick_best_dt_shortest(self, dt, dts, xs):
         i_max = numpy.argmax(xs)
 
         dt_extra_ = self.dt_extra
         if not dt_extra_:
-            dt_extra_ = 10*dts[i_max]
+            dt_extra_ = 2*dts[i_max]
+        #print 'dt_extra:', dt_extra_, i_max, dts[i_max], self.dt_extra
 
         if dt > dts[i_max] + dt_extra_:
-            e = self.StopSearch()
-            e.i_max = i_max
-            raise e
+            raise self.StopSearch(i_max)
         return i_max
-    def find_best_dt_longest(self, dt, dts, xs):
+    def pick_best_dt_longest(self, dt, dts, xs):
         xs_reversed = xs[::-1]
         i_max = numpy.argmax(xs_reversed)
         x_max = len(xs)-1-i_max   # undo the reversal
@@ -246,11 +263,19 @@ class SnapshotFinder(object):
             dt_extra_ = 2*dt
 
         if dt > dts[i_max] + dt_extra_:
-            e = self.StopSearch()
-            e.i_max = i_max
-            raise e
+            raise self.StopSearch(i_max)
         return i_max
-    find_best_dt = find_best_dt_shortest
+    def pick_best_dt_greedy(self, dt, dts, xs):
+        if len(xs) > 2 and xs[-2] > xs[-1]:  # if we have decreased on the last step
+            raise self.StopSearch(len(xs)-2)
+        # break condition when exceeding scan time
+        dt_extra_ = self.dt_extra
+        if self.tstart + dt > self.tstop:
+            raise self.StopSearch(len(xs)-1)
+
+
+        return len(xs) - 1
+    pick_best_dt = pick_best_dt_shortest
 
     # This is the core function that does a search.
     def find(self):
@@ -283,7 +308,7 @@ class SnapshotFinder(object):
             # Find best dt.  This can raise self.StopSearch in order
             # to terminate the search early (in that case it should
             # set i_max as an attribute of the exception.
-            i_max = self.find_best_dt(dt, dts, xs)
+            i_max = self.pick_best_dt(dt, dts, xs)
         except self.StopSearch as e:
             i_max = e.i_max
 
@@ -436,12 +461,20 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--plot", action='store_true',
                         help="Plot also?")
 
-    parser.add_argument("--tstart", type=float,)
-    parser.add_argument("--dtmin", type=float,)
-    parser.add_argument("--dtmax", type=float,)
-    parser.add_argument("--dtstep", type=float,)
-    parser.add_argument("--dtextra", type=float, default=None)
+    parser.add_argument("--tformat")
+    parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
+    parser.add_argument("--tstop", type=float, help="Time to end analysis.")
     parser.add_argument("--dtmode", default='linear')
+    parser.add_argument("--maxmode", default='shortest')
+
+    group = parser.add_argument_group("Linear time options")
+    group.add_argument("--dtmin", type=float,)
+    group.add_argument("--dtmax", type=float,)
+    group.add_argument("--dtstep", type=float,)
+    group.add_argument("--dtextra", type=float, default=None)
+
+    group = parser.add_argument_group("Logarithmic time options")
+    group.add_argument("--log-dtmax", type=float,)
 
     args = parser.parse_args()
     #print args
@@ -453,17 +486,29 @@ if __name__ == '__main__':
                       grouped=args.grouped)
     print "file loaded"
 
-    finder = SnapshotFinder(evs, tstart=args.tstart, args=args,
+    finder = SnapshotFinder(evs, tstart=args.tstart, tstop=args.tstop,
+                            args=args,
                             weighted=bool(args.w),
-                            dtmode=args.dtmode)
+                            dtmode=args.dtmode,
+                            maxmode=args.maxmode,
 
-    if args.dtextra is not None: finder.dt_extra = args.dtextra
-    if args.dtmin   is not None: finder.dt_min   = args.dtmin
-    if args.dtmax   is not None: finder.dt_max   = args.dtmax
-    if args.dtstep  is not None: finder.dt_step  = args.dtstep
+                            # linear options
+                            dt_min   = args.dtmin,
+                            dt_max   = args.dtmax,
+                            dt_extra = args.dtextra,
+                            dt_step  = args.dtstep,
 
-    def format_t(t):
-        return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
+                            # logarithmic search
+                            log_dt_max = args.log_dtmax,
+                            )
+
+
+    # Time format specification (for output files and stdout)
+    format_t = lambda x: x   # null formatter
+    if args.tformat == 'unixtime':
+        # Formatter for unix time (seconds since 1970-01-01 00:00 UTC)
+        format_t = lambda t: \
+                   datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
     format_t_log = format_t
 
     print format_t(evs.t_min()), format_t(evs.t_max())
