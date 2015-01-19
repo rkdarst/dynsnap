@@ -457,7 +457,9 @@ if __name__ == '__main__':
         print >> fout_full, '#t val dt measure_data'
     if args.plot:
         plotter = Plotter(finder, args=args.__dict__)
-    while True:
+
+    try:
+      while True:
         x = finder.find()
         if x is None:
             break
@@ -486,6 +488,11 @@ if __name__ == '__main__':
 
         if args.plot:
             plotter.add(finder)
+    except KeyboardInterrupt:
+        # finalize plotting then re-raise.
+        if args.plot:
+            plotter.plot(args.output)
+        raise
 
     if args.plot:
         plotter.plot(args.output)
