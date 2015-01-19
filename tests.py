@@ -37,15 +37,25 @@ class BaseTest(object):
                       args=dict(annotate_peaks=self.ann_pk))
         # This is the core.  Iterate through until we are done wwith
         # all intervals.
+        x = False
         while True:
             interval = finder.find()
             if interval is None: break
             t1, t2 = interval
 
+            if not x:
+                #x = True
+                for i, t in enumerate(finder._finder_data['ts']):
+                    print finder._finder_data['dts'][i], \
+                          finder._finder_data['measure_data'][i]
+
+
             if plot:
                 plotter.add(finder)
 
             print t1, t2
+
+            break
 
         if plot:
             # Callback function to decorate the plot a little bit.
@@ -95,8 +105,14 @@ class drift1C(T):
                             t_max=100, N=10000)
     def theory(self):
         return lambda dt: models.J1(dt, Pe=partial(models.Pe, self.ma['p']))
+        #return partial(models.J1_c, self.ma['c'], self.ma['p'])
 class drift1D(T):
     m=models.drift; ma=dict(seed=13, t_crit=(200, 500))
+class drift1E(T):
+    m=models.drift; ma=dict(seed=None, c=0.01, p=.2, merge_first=False,
+                            t_max=100, N=100000)
+    def theory(self):
+        return partial(models.J1_c, self.ma['c'], self.ma['p'])
 
 
 class periodic1A(T):

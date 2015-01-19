@@ -123,6 +123,42 @@ def Pe(p, dt):
     return 1.-((1.-p)**dt)
 def J1(dt, Pe):
     return Pe(dt) / float(2-Pe(dt))
+import functools
+import operator
+from math import exp, log
+def product(it):
+    return functools.reduce(operator.mul, it, 1)
+def P_all(it):
+    return product(p for p in it)
+def P_any(it):
+    return 1. - product((1.-p) for p in it)
+    #return 1. - exp(sum(log(1.-p) for p in it))
+def Pe_c(c, p, dt):
+    #x = 1 - product((1-p*(1-c)**dt_) for dt_ in range(1, dt+1))
+    x = P_any( p*(1.-c)**(dt_-1)  for dt_ in range(1, dt+1)  )
+    return x
+def Pe_c_2(c, p, dt):
+    pass
+def J1_c(c, p, dt):
+
+    left  = P_any( p * (1.-c)**(dt_-1)    for dt_ in range(1, dt+1)  )
+    right = P_any( p * (1.-c)**(dt_)      for dt_ in range(1, dt+1)  )
+    #half = 1 - product( (1-(1-(1-c)**(dt+1))*p)  for dt_ in range(2, dt+1)  )
+    half_L = P_any( p * (1-(1.-c)**(dt_-1))  for dt_ in range(2, dt+1) )
+    half_R = P_any( p * (1-(1.-c)**(dt_))    for dt_ in range(1, dt+1) )
+
+    #half_L *= .6
+    #half_R *= .6
+
+    isect = left*right
+    union = float( half_L + half_R + left + right - left*right )
+
+    N = 100000
+    print dt, int(isect*N), int(union*N), \
+              int((half_L+left)*N), int((half_R+right)*N)
+
+    return isect / union
+
 
 
 if __name__ == "__main__":
