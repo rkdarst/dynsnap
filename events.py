@@ -184,9 +184,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
+    if args.datacols:
+        datacols = tuple(int(x) for x in args.datacols.split(','))
+    else:
+        datacols = None
     evs = load_events(args.input, col_time=args.t,
                       col_weight=args.w, cache_fname=args.cached_output,
                       unordered=args.unordered,
                       grouped=args.grouped,
-                      cols_data=tuple(int(x) for x in args.datacols.split(',')),
+                      cols_data=datacols,
                       cache=True)
