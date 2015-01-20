@@ -55,7 +55,7 @@ class BaseTest(object):
 
             print t1, t2
 
-            break
+            #break
 
         if plot:
             # Callback function to decorate the plot a little bit.
