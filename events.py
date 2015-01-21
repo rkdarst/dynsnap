@@ -159,9 +159,7 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
     ev.add_events(_iter())
     return ev
 
-
-
-if __name__ == '__main__':
+def main():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -194,3 +192,7 @@ if __name__ == '__main__':
                       grouped=args.grouped,
                       cols_data=datacols,
                       cache=True)
+
+
+if __name__ == '__main__':
+    main()
