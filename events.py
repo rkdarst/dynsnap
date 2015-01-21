@@ -1,4 +1,5 @@
 import sqlite3
+import sys
 
 class Events(object):
     def __init__(self, fname=':memory:'):
@@ -60,6 +61,12 @@ class Events(object):
             return c
         else:
             return _EventsListSubset(self, interval.start)
+    def iter_ordered(self):
+        c = self.conn.cursor()
+        c.execute('''select t, e, w from event order by t''')
+        return c
+
+
 
 class _EventListSubset(object):
     def __init__(self, events, t_start):
@@ -159,7 +166,7 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
     ev.add_events(_iter())
     return ev
 
-def main():
+def main(argv=sys.argv):
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -179,7 +186,7 @@ def main():
     parser.add_argument("--datacols", default="",
                         help="Weight column")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
 
     if args.datacols:
@@ -194,5 +201,67 @@ def main():
                       cache=True)
 
 
+def main_analyze(argv=sys.argv):
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input")
+    parser.add_argument("output")
+
+
+    parser.add_argument("--uw", action='store_true', help="Weighted analysis")
+    parser.add_argument("-timescale", type=float, help="time scale")
+    args = parser.parse_args(argv[1:])
+
+    time_scale = 1.
+    if args.timescale:
+        time_scale = args.timescale
+    weighted = not args.uw
+
+    evs = Events(args.input)
+    e_last_time = { }
+    inter_event_times = [ ]
+    t_min = evs.t_min()
+    for i, (t, e, w) in enumerate(evs.iter_ordered()):
+        #if i > 100000000:
+        #    break
+        #print t, e, w
+        if e not in e_last_time:
+            e_last_time[e] = t
+            inter_event_times.append(t-t_min)
+            continue
+        dt = t - e_last_time[e]
+        inter_event_times.append(dt)
+
+    for t_lastseen in e_last_time.itervalues():
+        inter_event_times.append(t-t_lastseen)
+
+
+    if weighted:
+        weights = inter_event_times
+    else:
+        weights = None
+    import numpy
+    hist, bin_edges = numpy.histogram(inter_event_times,
+                                      weights=weights,
+                                      bins=50, normed=True)
+    #print hist
+    #print bin_edges
+
+    import pcd.support.matplotlibutil as mplutil
+
+    bin_edges /= time_scale
+
+    ax, extra = mplutil.get_axes(args.output+'.[png,pdf]')
+    ax.plot(bin_edges[:-1], hist)
+    ax.set_xlabel('$\Delta t$')
+    ax.set_ylabel('PDF')
+    ax.set_title('total t: [%s, %s], Dt=%4.2f'%(t_min, t, (t-t_min)/time_scale))
+    mplutil.save_axes(ax, extra)
+
+
 if __name__ == '__main__':
-    main()
+    if sys.argv[1] == 'analyze':
+        main_analyze(argv=sys.argv[0:1]+sys.argv[2:])
+    else:
+        main()
