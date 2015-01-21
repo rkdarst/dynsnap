@@ -396,6 +396,9 @@ class Plotter(object):
                                finder.interval_high))
     def plot(self, path, callback=None):
         """Do plotting.  Save to path.[pdf,png]"""
+        # If we have no data, don't do anything:
+        if len(self.points) == 0:
+            return
         try:
             import pcd.support.matplotlibutil as mplutil
             raise ImportError
@@ -545,7 +548,7 @@ if __name__ == '__main__':
         thigh = x[1]
         dt = thigh-tlow
         val = finder.found_x_max
-        print format_t(tlow), format_t(thigh), val, dt
+        print format_t(tlow), format_t(thigh), val, dt, len(finder.old_es)
         # Write and record informtion
         if args.output:
             print >> fout_thresh, format_t_log(tlow), format_t_log(thigh), \
