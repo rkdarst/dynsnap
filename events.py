@@ -71,7 +71,6 @@ class Events(object):
         return c
 
 
-
 class _EventListSubset(object):
     def __init__(self, events, t_start):
         self.events = events
@@ -204,6 +203,7 @@ def main(argv=sys.argv):
                       cols_data=datacols,
                       cache=True)
 
+
 def main_summary(argv=sys.argv):
     evs = Events(argv[1])
     print "Number of events: ", len(evs)
@@ -273,10 +273,44 @@ def main_analyze(argv=sys.argv):
     mplutil.save_axes(ax, extra)
 
 
+def main_burstiness(argv=sys.argv):
+    evs = Events(argv[1])
+
+    # The following two functions are from Raj in
+    # /networks/rajkp/Research/Network/Temporal.Networks/Codes/temporalProperties.py
+    import numpy as np
+    def getInterEventTime(tArray, dataDuration, periodicBoundary=False):
+        iet = np.diff(tArray)
+        if periodicBoundary is True:
+            iet = np.r_[iet, dataDuration+tArray[0]-tArray[-1]]
+        return iet
+    def burstiness(tArray, dataDuration, periodicBoundary=True):
+        iet = getInterEventTime(tArray, periodicBoundary, dataDuration)
+        sigma_t = np.std(iet)
+        mu_t = np.mean(iet)
+        return (sigma_t-mu_t)/(sigma_t+mu_t)
+
+    import collections
+    event_ts = collections.defaultdict(list)
+    for e, t, w in evs.iter_ordered():
+        event_ts[e].append(t)
+
+    duration = evs.t_max() - evs.t_min()
+
+    burstinesses = [ burstiness(tArray, dataDuration=duration, periodicBoundary=True)
+                     for tArray in event_ts.itervalues()
+                     if len(tArray) > 1 ]
+    print len(event_ts)
+    print len(evs)
+    print np.mean(burstinesses), np.std(burstinesses)
+
+
 if __name__ == '__main__':
     if sys.argv[1] == 'analyze':
         main_analyze(argv=sys.argv[0:1]+sys.argv[2:])
     elif sys.argv[1] == 'summary':
         main_summary(argv=sys.argv[0:1]+sys.argv[2:])
+    elif sys.argv[1] == 'burstiness':
+        main_burstiness(argv=sys.argv[0:1]+sys.argv[2:])
     else:
         main()
