@@ -48,6 +48,10 @@ class Events(object):
         c = self.conn.cursor()
         c.execute("SELECT count(*) from event")
         return c.fetchone()[0]
+    def n_distinct_events(self):
+        c = self.conn.cursor()
+        c.execute("SELECT count( DISTINCT e ) from event")
+        return c.fetchone()[0]
 
     def __getitem__(self, interval):
         assert isinstance(interval, slice)
@@ -186,7 +190,7 @@ def main(argv=sys.argv):
     parser.add_argument("--datacols", default="",
                         help="Weight column")
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv[1:])
 
 
     if args.datacols:
@@ -200,6 +204,12 @@ def main(argv=sys.argv):
                       cols_data=datacols,
                       cache=True)
 
+def main_summary(argv=sys.argv):
+    evs = Events(argv[1])
+    print "Number of events: ", len(evs)
+    print "Number of unique events: ", evs.n_distinct_events()
+    print "t_min, t_max:", evs.t_min(), evs.t_max()
+
 
 def main_analyze(argv=sys.argv):
     import argparse
@@ -210,7 +220,8 @@ def main_analyze(argv=sys.argv):
 
 
     parser.add_argument("--uw", action='store_true', help="Weighted analysis")
-    parser.add_argument("-timescale", type=float, help="time scale")
+    parser.add_argument("--timescale", type=float, help="time scale")
+    parser.add_argument("--nitems", type=int, help="number of items to analyze")
     args = parser.parse_args(argv[1:])
 
     time_scale = 1.
@@ -222,9 +233,11 @@ def main_analyze(argv=sys.argv):
     e_last_time = { }
     inter_event_times = [ ]
     t_min = evs.t_min()
+    nitems = args.nitems
+
     for i, (t, e, w) in enumerate(evs.iter_ordered()):
-        #if i > 100000000:
-        #    break
+        if nitems and i > nitems:
+            break
         #print t, e, w
         if e not in e_last_time:
             e_last_time[e] = t
@@ -263,5 +276,7 @@ def main_analyze(argv=sys.argv):
 if __name__ == '__main__':
     if sys.argv[1] == 'analyze':
         main_analyze(argv=sys.argv[0:1]+sys.argv[2:])
+    elif sys.argv[1] == 'summary':
+        main_summary(argv=sys.argv[0:1]+sys.argv[2:])
     else:
         main()
