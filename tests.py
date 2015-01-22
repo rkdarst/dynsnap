@@ -43,11 +43,11 @@ class BaseTest(object):
             if interval is None: break
             t1, t2 = interval
 
-            if not x:
+            #if not x:
                 #x = True
-                for i, t in enumerate(finder._finder_data['ts']):
-                    print finder._finder_data['dts'][i], \
-                          finder._finder_data['measure_data'][i]
+                #for i, t in enumerate(finder._finder_data['ts']):
+                #    print finder._finder_data['dts'][i], \
+                #          finder._finder_data['measure_data'][i]
 
 
             if plot:
@@ -113,6 +113,13 @@ class drift1E(T):
                             t_max=100, N=100000)
     def theory(self):
         return partial(models.J1_c, self.ma['c'], self.ma['p'])
+
+class drift1F(T):
+    from pcd.support.powerlaw import PowerLaw
+    cpl = PowerLaw(-.5, xmin=.05, xmax=.8)
+    ppl = PowerLaw(-1, xmin=.5, xmax=.8)
+    m=models.drift; ma=dict(seed=None, merge_first=False,
+                            t_max=1000, N=1000, c_func=cpl.rv, p_func=ppl.rv)
 
 
 class periodic1A(T):

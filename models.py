@@ -53,15 +53,26 @@ def toy103(seed=None, **kwargs):
 
 def drift(N=1000, p=.2, c=.01,
           t_max=1000, seed=None,
-          t_crit=(), **kwargs):
+          t_crit=(),
+          c_func=None,
+          p_func=None,
+          **kwargs):
     rng = get_rng(seed)
     t_crit = set(t_crit) # critical times: all events change
     next_eid = [ N-1 ]  # events 0--(N-1) are in the initial set
     def nextevent():
         next_eid[0] += 1
         return next_eid[0]
+    if c_func is None:
+        c_func = lambda : c
+    if p_func is None:
+        p_func = lambda : p
+
 
     events = set(xrange(N))
+    event_c = dict((e, c_func()) for e in events)
+    event_p = dict((e, p_func()) for e in events)
+
     for t in xrange(t_max):
         # critical events - all events change *before* t
         if t in t_crit:
@@ -69,17 +80,20 @@ def drift(N=1000, p=.2, c=.01,
 
         # Yield events that occur now.
         for e in events:
-            if rand(rng) < p:
+            if rand(rng) < event_p[e]:
                 yield t, e
 
         # Change events
         changes = [ ]
         for e in list(events):
-            if rand(rng) < c:
+            if rand(rng) < event_c[e]:
                 changes.append(e)
         for e in changes:
             events.remove(e)
-            events.add(nextevent())
+            i = nextevent()
+            events.add(i)
+            del event_c[e] ; event_c[i] = c_func()
+            del event_p[e] ; event_p[i] = p_func()
 
 
 def periodic(N=10000, p=.2, q=.2, c_scale=.01,
