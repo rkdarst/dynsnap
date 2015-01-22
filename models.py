@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
     it = globals()[args.model](**args.__dict__)
 
-    if args['grouped']:
+    if args.__dict__['grouped']:
         it = group_by_t(it)
         for t, events in it:
             print t, " ".join(str(x) for x in events)
