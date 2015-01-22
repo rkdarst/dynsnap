@@ -165,17 +165,17 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("model", help="benchmark model to simulate",)
-    parser.add_argument("--N", type=int, default=10000)
-    parser.add_argument("--p", type=float, default=.5)
-    parser.add_argument("--q", type=float, default=.2)
+    parser.add_argument("--N", type=int)
+    parser.add_argument("--t_max", type=int)
+    parser.add_argument("--p", type=float)
+    parser.add_argument("--q", type=float)
     parser.add_argument("--tau", type=int)
     parser.add_argument("--c_scale", type=int)
     parser.add_argument("--grouped", action='store_true', help="group output by time")
     args = parser.parse_args()
 
-
-
-    it = globals()[args.model](**args.__dict__)
+    args_dict = dict((k,v) for k,v in args.__dict__.iteritems() if v is not None)
+    it = globals()[args.model](**args_dict)
 
     if args.__dict__['grouped']:
         it = group_by_t(it)
