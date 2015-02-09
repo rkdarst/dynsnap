@@ -1,9 +1,13 @@
+import os
 import sqlite3
 import sys
 
 class Events(object):
-    def __init__(self, fname=':memory:'):
+    def __init__(self, fname=':memory:', mode='r'):
+        if mode == 'r' and not os.path.exists(fname):
+            raise ValueError("File does not exist: %s"%fname)
         self.conn = sqlite3.connect(fname)
+
         c = self.conn.cursor()
 
         c.execute('''CREATE TABLE if not exists event
@@ -52,6 +56,16 @@ class Events(object):
         c = self.conn.cursor()
         c.execute("SELECT count( DISTINCT e ) from event")
         return c.fetchone()[0]
+    def iter_distinct_events(self):
+        c = self.conn.cursor()
+        c.execute("SELECT DISTINCT e from event")
+        for (e,) in c:
+            yield e
+    def iter_ordered_of_event(self, e):
+        c = self.conn.cursor()
+        c.execute("SELECT DISTINCT t, w from event where e=?", (e, ))
+        return c
+
 
     def __getitem__(self, interval):
         assert isinstance(interval, slice)
@@ -273,22 +287,24 @@ def main_analyze(argv=sys.argv):
     mplutil.save_axes(ax, extra)
 
 
+import numpy as np
+def getInterEventTime(tArray, dataDuration, periodicBoundary=False):
+    iet = np.diff(tArray)
+    if periodicBoundary is True:
+        iet = np.r_[iet, dataDuration+tArray[0]-tArray[-1]]
+    return iet
+def burstiness(tArray, dataDuration, periodicBoundary=True):
+    iet = getInterEventTime(tArray, periodicBoundary, dataDuration)
+    sigma_t = np.std(iet)
+    mu_t = np.mean(iet)
+    return (sigma_t-mu_t)/(sigma_t+mu_t)
+
+
 def main_burstiness(argv=sys.argv):
     evs = Events(argv[1])
 
     # The following two functions are from Raj in
     # /networks/rajkp/Research/Network/Temporal.Networks/Codes/temporalProperties.py
-    import numpy as np
-    def getInterEventTime(tArray, dataDuration, periodicBoundary=False):
-        iet = np.diff(tArray)
-        if periodicBoundary is True:
-            iet = np.r_[iet, dataDuration+tArray[0]-tArray[-1]]
-        return iet
-    def burstiness(tArray, dataDuration, periodicBoundary=True):
-        iet = getInterEventTime(tArray, periodicBoundary, dataDuration)
-        sigma_t = np.std(iet)
-        mu_t = np.mean(iet)
-        return (sigma_t-mu_t)/(sigma_t+mu_t)
 
     import collections
     event_ts = collections.defaultdict(list)
@@ -304,6 +320,52 @@ def main_burstiness(argv=sys.argv):
     print len(evs)
     print np.mean(burstinesses), np.std(burstinesses)
 
+def _burstiness_do(elist):
+    print 'pre-start'
+    evs = Events(fname)
+    #print elist
+    print 'start'
+    lists = [ list(t for t,w in evs.iter_ordered_of_event(e)) for e in elist ]
+    x =  [ burstiness(l) for l in lists if len(l) > 1 ]
+    print 'stop'
+    return x
+
+def main_burstiness_parallel(argv=sys.argv):
+    global fname
+    fname = argv[1]
+    evs = Events(argv[1])
+
+    event_iter = evs.iter_distinct_events()
+    events_grouped = [ ]
+    try:
+      while True:
+        elist = [ ]
+        events_grouped.append(elist)
+        for _ in range(500):
+            elist.append(next(event_iter))
+    except StopIteration:
+        pass
+    print len(events_grouped)
+
+    burstinesses = [ ]
+
+    from multiprocessing import Pool
+    pool = Pool(processes=1)
+    #for elist in events_grouped:
+    #    result = pool.apply_async(_burstiness_do, elist,
+    #                              callback=lambda x: burstinesses.extend(x))
+    results = pool.map(_burstiness_do, events_grouped)
+    print type(results)
+    for e in results:
+        burstinesses.extend(e)
+    pool.close()
+    pool.join()
+    print evs.n_distinct_events()
+    print len(burstinesses)
+    print np.mean(burstinesses), np.std(burstinesses)
+
+
+
 
 if __name__ == '__main__':
     if sys.argv[1] == 'analyze':
@@ -312,5 +374,7 @@ if __name__ == '__main__':
         main_summary(argv=sys.argv[0:1]+sys.argv[2:])
     elif sys.argv[1] == 'burstiness':
         main_burstiness(argv=sys.argv[0:1]+sys.argv[2:])
+    elif 'main_'+sys.argv[1] in globals():
+        globals()['main_'+sys.argv[1]](argv=sys.argv[0:1]+sys.argv[2:])
     else:
         main()
