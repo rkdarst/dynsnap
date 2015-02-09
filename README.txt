@@ -7,6 +7,66 @@ It is still under development, so things are disorganized and
 incomplete.
 
 
+Basic principles of the method
+==============================
+
+
+Code structure
+==============
+
+
+Command line usage
+==================
+
+There are no dependencies, and only the `dynsnap.py` file is
+required.  Command line syntax is:
+   python dynsnap.py {InputFile} {OutputName} [options]
+
+Arguments:
+
+InputFile
+    Raw input file.
+OutputName
+    Prefix for output files.  Output is written to OutputName.out.txt,
+    etc.
+
+Options:
+
+-t N
+    Specify column holding time.   Default: 0
+-w N
+    Specify column holding weight: A value of -1 means that there is
+    no weight column, but calculate using weighted mechanics anyway.
+    Default: unweighted.
+--unordered
+    If given, the ordering of other columns does not matter, and lines
+    with events "aaa bbb ccc" and "aaa ccc bbb" are considered the
+    same.
+--grouped
+    Alternative input format where each line can have multiple
+    events.
+--dont-merge-first
+    Do not perform the "merge first two intervals" process.
+
+--plot, -p
+    Write some plots at OutputName.{pdf,png}.  Requires matplotlib and
+    pcd.
+
+--cache
+    Store the processed input file in InputFile.cache.  This will
+    speed up re-runs of the method.
+--regen
+    Regenerate data in the cache (remove it before starting, then
+    recreate it.)
+
+--tstart
+--dtmin
+--dtmax
+--dtstep
+--dtextra
+    Undocumented internal options.
+
+
 
 Input formats
 =============
@@ -63,56 +123,6 @@ of these options, you MUST run with the "--regen" option to regenerate
 the cache.
 
 
-Usage
-=====
-
-There are no dependencies, and only the `dynsnap.py` file is
-required.  Command line syntax is:
-   python dynsnap.py {InputFile} {OutputName} [options]
-
-Arguments:
-
-InputFile
-    Raw input file.
-OutputName
-    Prefix for output files.  Output is written to OutputName.out.txt,
-    etc.
-
-Options:
-
--t N
-    Specify column holding time.   Default: 0
--w N
-    Specify column holding weight: A value of -1 means that there is
-    no weight column, but calculate using weighted mechanics anyway.
-    Default: unweighted.
---unordered
-    If given, the ordering of other columns does not matter, and lines
-    with events "aaa bbb ccc" and "aaa ccc bbb" are considered the
-    same.
---grouped
-    Alternative input format where each line can have multiple
-    events.
---dont-merge-first
-    Do not perform the "merge first two intervals" process.
-
---plot, -p
-    Write some plots at OutputName.{pdf,png}.  Requires matplotlib and
-    pcd.
-
---cache
-    Store the processed input file in InputFile.cache.  This will
-    speed up re-runs of the method.
---regen
-    Regenerate data in the cache (remove it before starting, then
-    recreate it.)
-
---tstart
---dtmin
---dtmax
---dtstep
---dtextra
-    Undocumented internal options.
 
 
 
