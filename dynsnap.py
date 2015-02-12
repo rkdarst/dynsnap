@@ -1,11 +1,17 @@
 # Richard Darst, November 2014
 
 import argparse
+import collections
 import datetime
 from math import log10
 import sqlite3
+import sys
 
 from events import Events, load_events
+
+ResultsRow = collections.namedtuple('ResultsRow',
+                                    ('tlow', 'thigh', 'dt', 'x_max', 'measure_data',
+                                     'finder_data'))
 
 class _LenProxy(object):
     def __init__(self, l):   self.l = l
@@ -442,7 +448,7 @@ class Plotter(object):
 
 
 
-if __name__ == '__main__':
+def main(argv=sys.argv, return_output=True):
     from itertools import product
     import math
     import numpy
@@ -491,7 +497,7 @@ if __name__ == '__main__':
     group = parser.add_argument_group("Logarithmic time options")
     group.add_argument("--log-dtmax", type=float,)
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=argv)
     #print args
 
     evs = load_events(args.input, col_time=args.t,
@@ -529,8 +535,8 @@ if __name__ == '__main__':
     print format_t(evs.t_min()), format_t(evs.t_max())
     #evs.dump()
 
-    points = [ ]
-    finding_data = [ ]
+    if return_output:
+        output = [ ]
     if args.output:
         # Make directory for output, if it doesn't exist already.
         dir_ = os.path.dirname(args.output)
@@ -545,7 +551,6 @@ if __name__ == '__main__':
     if args.plot:
         plotter = Plotter(finder, args=args.__dict__)
 
-
     time_last_plot = time.time()
 
     try:
@@ -559,6 +564,9 @@ if __name__ == '__main__':
         val = finder.found_x_max
         print format_t(tlow), format_t(thigh), val, dt, len(finder.old_es)
         # Write and record informtion
+        if return_output:
+            output.append(ResultsRow(tlow, thigh, dt, val,
+                                     finder._measure_data, finder._finder_data))
         if args.output:
             print >> fout_thresh, format_t_log(tlow), format_t_log(thigh), \
                                   dt, val, len(finder.old_es), \
@@ -590,4 +598,9 @@ if __name__ == '__main__':
 
     if args.plot:
         plotter.plot(args.output)
+    if return_output:
+        return output
 
+
+if __name__ == '__main__':
+    main(argv=sys.argv, return_output=False)
