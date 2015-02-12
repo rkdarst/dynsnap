@@ -116,6 +116,7 @@ class SnapshotFinder(object):
 
         if dtmode == 'linear':    self.iter_all_dts = self.iter_all_dts_linear
         elif dtmode == 'log':     self.iter_all_dts = self.iter_all_dts_log
+        elif dtmode == 'event':   self.iter_all_dts = self.iter_all_dts_event
         else:                     raise ValueError("Unknown dtmode: %s"%dtmode)
 
         if   maxmode == 'shortest':  self.pick_best_dt = self.pick_best_dt_shortest
@@ -250,6 +251,21 @@ class SnapshotFinder(object):
             dt += int(10**( max(0, int(log10(dt))+log_scale)  ))
             if self.log_dt_max and dt > self.log_dt_max: break
             #if self.tstart + dt > self.tstop: break  # moved to find()
+    def iter_all_dts_event(self):
+        """Iterate dts that actually exist.
+
+        This is the most adaptive sampling method, but is bad when the
+        intrinsic time is much greater than the shortest event time.
+        In that case, set dtstep and use linear mode."""
+        tstart = self.tstart
+        stop = self.dt_max
+        c = self.evs.conn.cursor()
+        c.execute('SELECT DISTINCT t FROM event WHERE t >= ? '
+                  'ORDER BY t ASC', (self.tstart, ))
+        for row in c:
+            yield row[0] - tstart
+            if row[0] > stop: break
+
 
     iter_all_dts = iter_all_dts_linear
     class StopSearch(BaseException):
@@ -497,7 +513,7 @@ def main(argv=sys.argv, return_output=True):
     parser.add_argument("--tformat")
     parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
     parser.add_argument("--tstop", type=float, help="Time to end analysis.")
-    parser.add_argument("--dtmode", default='linear')
+    parser.add_argument("--dtmode", default='linear', help="dt search pattern: linear, log, event")
     parser.add_argument("--maxmode", default='shortest')
 
     group = parser.add_argument_group("Linear time options")
