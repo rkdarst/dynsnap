@@ -239,6 +239,7 @@ class SnapshotFinder(object):
             yield dt
             if dt > stop: break
             dt += step
+            #if self.tstart + dt > self.tstop: break  # moved to find()
     def iter_all_dts_log(self):
         dt = 1
         log_scale = -1  # 0 = 1,2,3,..10,20,..100,200
@@ -248,7 +249,7 @@ class SnapshotFinder(object):
             yield dt
             dt += int(10**( max(0, int(log10(dt))+log_scale)  ))
             if self.log_dt_max and dt > self.log_dt_max: break
-            if self.tstart + dt > self.tstop: break
+            #if self.tstart + dt > self.tstop: break  # moved to find()
 
     iter_all_dts = iter_all_dts_linear
     class StopSearch(BaseException):
@@ -329,6 +330,12 @@ class SnapshotFinder(object):
             # to terminate the search early (in that case it should
             # set i_max as an attribute of the exception.
             i_max = self.pick_best_dt(dt, dts, xs)
+            # Condition for breaking.  This assumes that the dt values
+            # are monitonically increasing.  If not, the iter_all_dts
+            # method needs to ensure that this condition is never
+            # fulfilled until after it is ready to stop.
+            if self.tstart + dt > self.tstop:
+                break
         except self.StopSearch as e:
             i_max = e.i_max
 
