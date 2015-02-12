@@ -28,10 +28,17 @@ class BaseTest(object):
         events = dynsnap.Events(mode='rw')
         events.add_events((t, e, 1) for t,e in model(**self.ma))
 
+        # Create keyword arguments for the SnapshotFinder from model args.
+        varnames = dynsnap.SnapshotFinder.__init__.im_func.func_code.co_varnames
+        finder_kwargs = { }
+        for name in varnames:
+            if name in self.ma:
+                finder_kwargs[name] = self.ma[name]
+
         finder = dynsnap.SnapshotFinder(events,
                                         weighted=self.ma.get('w'),
                                         args=self.ma,
-                                        tstop=self.ma.get('tstop', None))
+                                        **finder_kwargs)
 
         if plot:
             plotter = dynsnap.Plotter(finder,
@@ -122,11 +129,16 @@ class drift1F(T):
     m=models.drift; ma=dict(seed=None, merge_first=False,
                             t_max=1000, N=1000, c_func=cpl.rv, p_func=ppl.rv)
 
-
 class drift1G(T):
     # Test t_stop at a fixed point.
     m=models.drift; ma=dict(seed=13, c=0.02, merge_first=False,
                             tstop=500)
+
+class drift2A(T):
+    # Test t_stop at a fixed point.
+    m=models.drift; ma=dict(seed=13, c=0.02, merge_first=False,
+                            tstop=500, dtmode='event',
+                            )
 
 
 class periodic1A(T):
