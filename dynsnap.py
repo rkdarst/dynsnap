@@ -297,6 +297,11 @@ class SnapshotFinder(object):
         """Core snapshot finding method.
 
         Returns (low, high) values."""
+        # Our stop condition.  Returning None is a sentinel to the
+        # caller stop the analysis.
+        if self.tstart >= self.tstop:
+            return None
+
         dts = [ ]
         xs = [ ]
         self._finder_data = dict(xs=[], ts=[], dts=[],
