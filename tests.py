@@ -30,7 +30,8 @@ class BaseTest(object):
 
         finder = dynsnap.SnapshotFinder(events,
                                         weighted=self.ma.get('w'),
-                                        args=self.ma)
+                                        args=self.ma,
+                                        tstop=self.ma.get('tstop', None))
 
         if plot:
             plotter = dynsnap.Plotter(finder,
@@ -120,6 +121,12 @@ class drift1F(T):
     ppl = PowerLaw(-1, xmin=.5, xmax=.8)
     m=models.drift; ma=dict(seed=None, merge_first=False,
                             t_max=1000, N=1000, c_func=cpl.rv, p_func=ppl.rv)
+
+
+class drift1G(T):
+    # Test t_stop at a fixed point.
+    m=models.drift; ma=dict(seed=13, c=0.02, merge_first=False,
+                            tstop=500)
 
 
 class periodic1A(T):
