@@ -13,7 +13,7 @@ import models
 class BaseTest(object):
     #m = models.model_func
     #ma = {'arg': 'value' }
-    #desc = 'description for under subplot'
+    desc = None  # description for under the title
     ann_pk = True   # Annotate the peaks in the output plot?
     ma = { }
 
@@ -25,7 +25,7 @@ class BaseTest(object):
         # a better way to handle this?
         model = self.m.im_func
 
-        events = dynsnap.Events()
+        events = dynsnap.Events(mode='rw')
         events.add_events((t, e, 1) for t,e in model(**self.ma))
 
         finder = dynsnap.SnapshotFinder(events,
@@ -64,8 +64,8 @@ class BaseTest(object):
                 if self.ma:
                     title = "%s (%s)"%(title, " ".join("%s=%s"%(k,v)
                                 for k,v in sorted(self.ma.iteritems())))
-                if 'desc' in kwargs:
-                    title += '\n'+kwargs['desc']
+                if self.desc:
+                    title += '\n'+self.desc
                 lcls['fig'].suptitle(title)
 
                 # plot theoretical value
