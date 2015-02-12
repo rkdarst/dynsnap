@@ -4,6 +4,8 @@ import sys
 
 class Events(object):
     def __init__(self, fname=':memory:', mode='r'):
+        #if fname == ':memory:' and mode == 'r':
+        #    raise ValueError("For fname=':memory:', you probably want mode='rw'")
         if mode == 'r' and not os.path.exists(fname):
             raise ValueError("File does not exist: %s"%fname)
         self.conn = sqlite3.connect(fname)
