@@ -77,6 +77,9 @@ def drift(N=1000, p=.2, c=.01,
         # critical events - all events change *before* t
         if t in t_crit:
             events = set(nextevent() for _ in xrange(N))
+            event_c = dict((e, c_func()) for e in events)
+            event_p = dict((e, p_func()) for e in events)
+
 
         # Yield events that occur now.
         for e in events:
