@@ -85,6 +85,11 @@ import numpy
 class SnapshotFinder(object):
     old_es = None   # None on first round
     old_incremental_es = None
+    dt_min = 1
+    dt_max = 1000
+    dt_step = 1
+    dt_extra = 50
+    log_dt_max = None
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
                  dtmode='linear', maxmode='shortest',
@@ -112,11 +117,15 @@ class SnapshotFinder(object):
         elif maxmode == 'greedy':    self.pick_best_dt = self.pick_best_dt_greedy
         else:                        raise ValueError("Unknown maxmode: %s"%maxmode)
 
-        self.dt_min     = dt_min
-        self.dt_max     = dt_max
-        self.dt_step    = dt_step
-        self.dt_extra   = dt_extra
-        self.log_dt_max = log_dt_max
+        locals_ = locals()
+        for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra', 'log_dt_max'):
+            if locals_[name] is not None:
+                setattr(self, name, locals_[name])
+        #self.dt_min     = dt_min
+        #self.dt_max     = dt_max
+        #self.dt_step    = dt_step
+        #self.dt_extra   = dt_extra
+        #self.log_dt_max = log_dt_max
 
 
     # Two generalized set-making functions.  These take an iterator
