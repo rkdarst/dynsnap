@@ -479,7 +479,7 @@ class Plotter(object):
 
 
 
-def main(argv=sys.argv, return_output=True):
+def main(argv=sys.argv[1:], return_output=True):
     from itertools import product
     import math
     import numpy
@@ -640,4 +640,4 @@ def main(argv=sys.argv, return_output=True):
 
 
 if __name__ == '__main__':
-    main(argv=sys.argv, return_output=False)
+    main(argv=sys.argv[1:], return_output=False)

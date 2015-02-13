@@ -106,11 +106,12 @@ import os
 def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 unordered=False, grouped=False, cache_fname=None,
                 cols_data=None):
-    try:
-        evs = Events(fname)
-        return evs
-    except sqlite3.DatabaseError:
-        pass
+    if os.path.exists(fname):
+        try:
+            evs = Events(fname)
+            return evs
+        except sqlite3.DatabaseError:
+            pass
 
     events = { }
     def _iter():
@@ -181,7 +182,7 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
             return ev
     else:
         cache_fname = ':memory:'
-    ev = Events(cache_fname)
+    ev = Events(cache_fname, mode='rw')
     ev.add_events(_iter())
     return ev
 
