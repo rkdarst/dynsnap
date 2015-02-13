@@ -91,16 +91,16 @@ import numpy
 class SnapshotFinder(object):
     old_es = None   # None on first round
     old_incremental_es = None
-    dt_min = 1
-    dt_max = 1000
+    dt_min = None
+    dt_max = None
     dt_step = 1
-    dt_extra = 50
+    dt_extra = None
     log_dt_max = None
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
-                 dtmode='linear', maxmode='shortest',
+                 dtmode='event', peakfinder='shortest',
                  args={},
-                 dt_min=1, dt_max=1000, dt_step=1, dt_extra=50,
+                 dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
                  log_dt_max=None,
                  ):
         self.evs = evs
@@ -119,10 +119,10 @@ class SnapshotFinder(object):
         elif dtmode == 'event':   self.iter_all_dts = self.iter_all_dts_event
         else:                     raise ValueError("Unknown dtmode: %s"%dtmode)
 
-        if   maxmode == 'shortest':  self.pick_best_dt = self.pick_best_dt_shortest
-        elif maxmode == 'longest':   self.pick_best_dt = self.pick_best_dt_longest
-        elif maxmode == 'greedy':    self.pick_best_dt = self.pick_best_dt_greedy
-        else:                        raise ValueError("Unknown maxmode: %s"%maxmode)
+        if   peakfinder == 'shortest':  self.pick_best_dt = self.pick_best_dt_shortest
+        elif peakfinder == 'longest':   self.pick_best_dt = self.pick_best_dt_longest
+        elif peakfinder == 'greedy':    self.pick_best_dt = self.pick_best_dt_greedy
+        else:                        raise ValueError("Unknown peakfinder: %s"%peakfinder)
 
         locals_ = locals()
         for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra', 'log_dt_max'):
@@ -133,6 +133,9 @@ class SnapshotFinder(object):
         #self.dt_step    = dt_step
         #self.dt_extra   = dt_extra
         #self.log_dt_max = log_dt_max
+        if self.dt_min   is None:    self.dt_min   = self.dt_step
+        if self.dt_max   is None:    self.dt_max   = 1000*self.dt_step
+        if self.dt_extra is None:    self.dt_extra = 50*self.dt_step
 
 
     # Two generalized set-making functions.  These take an iterator
@@ -513,16 +516,22 @@ def main(argv=sys.argv, return_output=True):
     parser.add_argument("--tformat")
     parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
     parser.add_argument("--tstop", type=float, help="Time to end analysis.")
-    parser.add_argument("--dtmode", default='linear', help="dt search pattern: linear, log, event")
-    parser.add_argument("--maxmode", default='shortest')
+    parser.add_argument("--dtmode", default='event',
+                        help="dt search pattern (linear, log, event) "
+                             "(default: %(default)s)")
+    parser.add_argument("--peakfinder", default='shortest',
+                        help="How to select peak of Jaccard similarity. "
+                             "(shortest, longest, greedy) "
+                             "(default=%(default)s)")
 
-    group = parser.add_argument_group("Linear time options")
-    group.add_argument("--dtmin", type=float,)
-    group.add_argument("--dtmax", type=float,)
-    group.add_argument("--dtstep", type=float,)
-    group.add_argument("--dtextra", type=float, default=None)
+    group = parser.add_argument_group("Linear time options (must specify --dtmode=linear)")
+    group.add_argument("--dtstep", type=float, default=SnapshotFinder.dt_step,
+                       help="step size for dt scanning. (default=%(default)s)")
+    group.add_argument("--dtmin", type=float, help="(default=DTSTEP)")
+    group.add_argument("--dtmax", type=float, help="(default=1000*DTSTEP)")
+    group.add_argument("--dtextra", type=float, help="(default=50*DTSTEP)")
 
-    group = parser.add_argument_group("Logarithmic time options")
+    group = parser.add_argument_group("Logarithmic time options (with --dtmode=log)")
     group.add_argument("--log-dtmax", type=float,)
 
     args = parser.parse_args(args=argv)
@@ -539,7 +548,7 @@ def main(argv=sys.argv, return_output=True):
                             args=args,
                             weighted=bool(args.w),
                             dtmode=args.dtmode,
-                            maxmode=args.maxmode,
+                            peakfinder=args.peakfinder,
 
                             # linear options
                             dt_min   = args.dtmin,
