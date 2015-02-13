@@ -3,7 +3,7 @@
 import argparse
 import collections
 import datetime
-from math import log10
+from math import floor, log10
 import sqlite3
 import sys
 
@@ -245,13 +245,27 @@ class SnapshotFinder(object):
             dt += step
             #if self.tstart + dt > self.tstop: break  # moved to find()
     def iter_all_dts_log(self):
-        dt = 1
-        log_scale = -1  # 0 = 1,2,3,..10,20,..100,200
-                        #-1 = 1,2,..10,11...100,110,333
+        # Find the next event to set the log scale properly.
+        c = self.evs.conn.cursor()
+        c.execute('SELECT DISTINCT t FROM event WHERE t > ? '
+                  'ORDER BY t ASC LIMIT 1', (self.tstart, ))
+        smallest_dt = c.fetchone()[0] - self.tstart
+        c.close()
+        # set this to minimum dt we scan.  Should be a power of ten
+        # (10**(int)).
+        #base_scale = 1.
+        # Find a base scale smaller than our next event.
+        base_scale = 10.**floor(log10(smallest_dt))
+        # Specifies how many digits we scan in the log thing.
+        # 0 = 1,2,3,..10,20,..100,200
+        #-1 = 1,2,..10,11...100,110,333
+        log_precision = 1
+
+        i = 1
         while True:
-            #print dt
+            dt = i * base_scale
             yield dt
-            dt += int(10**( max(0, int(log10(dt))+log_scale)  ))
+            i += int(10**( max(0, int(log10(i))-log_precision)  ))
             if self.log_dt_max and dt > self.log_dt_max: break
             #if self.tstart + dt > self.tstop: break  # moved to find()
     def iter_all_dts_event(self):
