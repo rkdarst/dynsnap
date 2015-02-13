@@ -267,7 +267,7 @@ class SnapshotFinder(object):
                   'ORDER BY t ASC', (self.tstart, ))
         for row in c:
             yield row[0] - tstart
-            if row[0] > stop: break
+            if row[0] - tstart > stop: break
 
 
     iter_all_dts = iter_all_dts_linear
