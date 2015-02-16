@@ -556,7 +556,7 @@ def main(argv=sys.argv[1:], return_output=True):
                       regen=args.regen,
                       unordered=args.unordered,
                       grouped=args.grouped)
-    print "file loaded"
+    print "# file loaded: args.input"
 
     finder = SnapshotFinder(evs, tstart=args.tstart, tstop=args.tstop,
                             args=args,
@@ -583,7 +583,7 @@ def main(argv=sys.argv[1:], return_output=True):
                    datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
     format_t_log = format_t
 
-    print format_t(evs.t_min()), format_t(evs.t_max())
+    print "# Total time range:", format_t(evs.t_min()), format_t(evs.t_max())
     #evs.dump()
 
     if return_output:
@@ -597,13 +597,14 @@ def main(argv=sys.argv[1:], return_output=True):
         #
         fout_thresh = open(args.output+'.out.txt', 'w')
         fout_full = open(args.output+'.out.J.txt', 'w')
-        print >> fout_thresh, '#tlow thigh dt val len(old_es) measure_data'
-        print >> fout_full, '#t val dt measure_data'
+        print >> fout_thresh, '#tlow thigh dt J len(old_es) measure_data'
+        print >> fout_full, '#t J dt measure_data'
     if args.plot:
         plotter = Plotter(finder, args=args.__dict__)
 
     time_last_plot = time.time()
 
+    print '# Columns: tlow thigh dt J number_of_events'
     try:
       while True:
         x = finder.find()
@@ -613,7 +614,7 @@ def main(argv=sys.argv[1:], return_output=True):
         thigh = x[1]
         dt = thigh-tlow
         val = finder.found_x_max
-        print format_t(tlow), format_t(thigh), val, dt, len(finder.old_es)
+        print format_t(tlow), format_t(thigh), dt, val, len(finder.old_es)
         # Write and record informtion
         if return_output:
             output.append(ResultsRow(tlow, thigh, dt, val,
