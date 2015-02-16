@@ -15,7 +15,8 @@ def group_by_t(it):
     last_events = [ ]
     for t, e in it:
         if t != last_t:
-            yield last_t, last_events
+            if last_t is not None:
+                yield last_t, last_events
             last_t = t
             last_events = [ ]
         last_events.append(e)
