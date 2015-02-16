@@ -98,7 +98,7 @@ class SnapshotFinder(object):
     log_dt_max = None
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
-                 dtmode='event', peakfinder='shortest',
+                 dtmode='log', peakfinder='longest',
                  args={},
                  dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
                  log_dt_max=None,
@@ -302,10 +302,9 @@ class SnapshotFinder(object):
             raise self.StopSearch(i_max)
         return i_max
     def pick_best_dt_longest(self, dt, dts, xs):
-        xs_reversed = xs[::-1]
-        i_max = numpy.argmax(xs_reversed)
-        x_max = len(xs)-1-i_max   # undo the reversal
-        raise NotImplementedError("this has bugs") # i_max not updated
+        xs_array_reversedview = numpy.asarray(xs)[::-1]
+        i_max_reversed = numpy.argmax(xs_array_reversedview)
+        i_max = len(xs) - 1 - i_max_reversed
 
         dt_extra_ = self.dt_extra
         if not dt_extra_:
@@ -534,7 +533,7 @@ def main(argv=sys.argv[1:], return_output=True):
     parser.add_argument("--dtmode", default='event',
                         help="dt search pattern (linear, log, event) "
                              "(default: %(default)s)")
-    parser.add_argument("--peakfinder", default='shortest',
+    parser.add_argument("--peakfinder", default='longest',
                         help="How to select peak of Jaccard similarity. "
                              "(shortest, longest, greedy) "
                              "(default=%(default)s)")
