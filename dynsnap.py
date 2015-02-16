@@ -530,7 +530,7 @@ def main(argv=sys.argv[1:], return_output=True):
     parser.add_argument("--tformat")
     parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
     parser.add_argument("--tstop", type=float, help="Time to end analysis.")
-    parser.add_argument("--dtmode", default='event',
+    parser.add_argument("--dtmode", default='log',
                         help="dt search pattern (linear, log, event) "
                              "(default: %(default)s)")
     parser.add_argument("--peakfinder", default='longest',
