@@ -384,9 +384,10 @@ class SnapshotFinder(object):
         # which indicates that there was some extreme event.  In this
         # case, we restart completly.
         if (xs[i_max] == xs[-1]
-            #and xs[i_max] == xs[-1]
-            and xs[i_max] == 0
-            and self.old_es is not None):
+              #and xs[i_max] == xs[-1]
+              and xs[i_max] == 0
+              and self.old_es is not None):
+            print "### critical event detected at t=%s"%self.tstart
             # At this point, we have had an extreme event and we
             # should restart from zero.
             self.old_es = None # Remove old interval.  We need a fresh
@@ -420,7 +421,7 @@ class SnapshotFinder(object):
                 self._finder_data['ts'] = \
                       numpy.subtract(self._finder_data['ts'], old_tstart) \
                         * 2+old_tstart
-                print 'doubling'
+                print '### merging first two intervals'
 
                 return old_tstart, self.tstart
             else:
