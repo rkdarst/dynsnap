@@ -342,6 +342,12 @@ class SnapshotFinder(object):
         i_max = None
         try:
           for i, dt in enumerate(self.iter_all_dts()):
+            # Condition for breaking.  This assumes that the dt values
+            # are monitonically increasing.  If not, the iter_all_dts
+            # method needs to ensure that this condition is never
+            # fulfilled until after it is ready to stop.
+            if self.tstart + dt > self.tstop:
+                break
             # Get our new event sets for old and new intervals.
             es1s, es2s = self.get(dt)
             # Skip if there are no events in either interval (we don't
@@ -362,12 +368,6 @@ class SnapshotFinder(object):
             # to terminate the search early (in that case it should
             # set i_max as an attribute of the exception.
             i_max = self.pick_best_dt(dt, dts, xs)
-            # Condition for breaking.  This assumes that the dt values
-            # are monitonically increasing.  If not, the iter_all_dts
-            # method needs to ensure that this condition is never
-            # fulfilled until after it is ready to stop.
-            if self.tstart + dt > self.tstop:
-                break
         except self.StopSearch as e:
             i_max = e.i_max
 
