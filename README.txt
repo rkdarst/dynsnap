@@ -241,6 +241,20 @@ Automated tests of various models and options.
 
 
 
+Use as a library
+================
+
+Above, a command line interface is presented.  All code is modular an
+can be imported and used directly from Python, without needing to
+create temporary files.  This is the author's primary method of using
+this program.
+
+Unfortunately, this isn't documented yet (and the interface isn't
+totally settled yet)
+
+
+
+
 Input formats
 =============
 
