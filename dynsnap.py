@@ -497,7 +497,7 @@ class Plotter(object):
 
 
 
-def main(argv=sys.argv[1:], return_output=True):
+def main(argv=sys.argv[1:], return_output=True, evs=None):
     from itertools import product
     import math
     import numpy
@@ -556,12 +556,13 @@ def main(argv=sys.argv[1:], return_output=True):
     args = parser.parse_args(args=argv)
     #print args
 
-    evs = load_events(args.input, col_time=args.t,
-                      col_weight=args.w, cache=args.cache,
-                      regen=args.regen,
-                      unordered=args.unordered,
-                      grouped=args.grouped)
-    print "# file loaded: args.input"
+    if evs is None:
+        evs = load_events(args.input, col_time=args.t,
+                          col_weight=args.w, cache=args.cache,
+                          regen=args.regen,
+                          unordered=args.unordered,
+                          grouped=args.grouped)
+        print "# file loaded: args.input"
 
     finder = SnapshotFinder(evs, tstart=args.tstart, tstop=args.tstop,
                             args=args,
