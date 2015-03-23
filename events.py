@@ -2,6 +2,12 @@ import os
 import sqlite3
 import sys
 
+class ToInts(object):
+    def __init__(self):
+        self._dat = { }
+    def __call__(self, x):
+        return self._dat.setdefault(x, len(self._dat))
+
 class Events(object):
     def __init__(self, fname=':memory:', mode='r'):
         #if fname == ':memory:' and mode == 'r':
