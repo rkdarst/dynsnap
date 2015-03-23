@@ -95,13 +95,14 @@ class SnapshotFinder(object):
     dt_max = None
     dt_step = 1
     dt_extra = None
+    log_dt_min = None
     log_dt_max = None
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
                  dtmode='log', peakfinder='longest',
                  args={},
                  dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
-                 log_dt_max=None,
+                 log_dt_min=None, log_dt_max=None,
                  ):
         self.evs = evs
         if isinstance(args, argparse.Namespace):
@@ -125,7 +126,8 @@ class SnapshotFinder(object):
         else:                        raise ValueError("Unknown peakfinder: %s"%peakfinder)
 
         locals_ = locals()
-        for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra', 'log_dt_max'):
+        for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra',
+                     'log_dt_min', 'log_dt_max'):
             if locals_[name] is not None:
                 setattr(self, name, locals_[name])
         #self.dt_min     = dt_min
@@ -253,9 +255,11 @@ class SnapshotFinder(object):
         c.close()
         # set this to minimum dt we scan.  Should be a power of ten
         # (10**(int)).
-        #base_scale = 1.
+        if self.log_dt_min is not None:
+            base_scale = self.log_dt_min
         # Find a base scale smaller than our next event.
-        base_scale = 10.**floor(log10(smallest_dt))
+        else:
+            base_scale = 10.**floor(log10(smallest_dt))
         # Specifies how many digits we scan in the log thing.
         # 0 = 1,2,3,..10,20,..100,200
         #-1 = 1,2,..10,11...100,110,333
@@ -546,6 +550,7 @@ def main(argv=sys.argv[1:], return_output=True):
     group.add_argument("--dtextra", type=float, help="(default=50*DTSTEP)")
 
     group = parser.add_argument_group("Logarithmic time options (with --dtmode=log)")
+    group.add_argument("--log-dtmin", type=float,)
     group.add_argument("--log-dtmax", type=float,)
 
     args = parser.parse_args(args=argv)
@@ -571,6 +576,7 @@ def main(argv=sys.argv[1:], return_output=True):
                             dt_step  = args.dtstep,
 
                             # logarithmic search
+                            log_dt_min = args.log_dtmin,
                             log_dt_max = args.log_dtmax,
                             )
 
