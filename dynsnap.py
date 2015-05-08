@@ -613,7 +613,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
         fout_full = open(args.output+'.out.J.txt', 'w')
         print >> fout_thresh, '#tlow thigh dt J len(old_es) measure_data'
         print >> fout_full, '#t J dt measure_data'
-    if args.plot:
+    if return_output or args.plot:
         plotter = Plotter(finder, args=args.__dict__)
 
     time_last_plot = time.time()
@@ -650,7 +650,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
             print >> fout_full
             fout_full.flush()
 
-        if args.plot:
+        if return_output or args.plot:
             plotter.add(finder)
             # Plot a checkpoint if we are taking a long time.
             if time.time() > time_last_plot + 300:
@@ -665,7 +665,8 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
     if args.plot:
         plotter.plot(args.output)
     if return_output:
-        return output
+        return output, dict(finder=finder,
+                            plotter=plotter)
 
 
 if __name__ == '__main__':
