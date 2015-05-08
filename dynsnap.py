@@ -426,15 +426,18 @@ class SnapshotFinder(object):
                         * 2+old_tstart
                 print '### merging first two intervals'
 
+                self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
                 return old_tstart, self.tstart
             else:
                 # Old (normal) way of handling the first interval.
                 self.old_es = es1s
+                self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
                 self.interval_high = self.tstart
                 return old_tstart, self.tstart
         else:
             # Normal continuing process.
             self.old_es = es2s
+            self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
             self.interval_high = self.tstart
             return old_tstart, self.tstart
 
@@ -448,6 +451,8 @@ class Plotter(object):
         self.args = args
         self.points = [ ]
         self.finding_data = [ ]
+        self.n_distinct = [ ]
+        self.n_events = [ ]
     def add(self, finder):
         """Record state, for used in plotting"""
         tlow  = finder.interval_low
@@ -458,6 +463,8 @@ class Plotter(object):
                                finder._finder_data['xs'],
                                finder.interval_low,
                                finder.interval_high))
+        self.n_distinct.append(len(finder.old_es))
+        self.n_events.append(finder.old_n_events)
     def plot(self, path, callback=None):
         """Do plotting.  Save to path.[pdf,png]"""
         # If we have no data, don't do anything:
