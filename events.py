@@ -23,6 +23,10 @@ class Events(object):
         c.execute('''CREATE INDEX if not exists index_event_t ON event (t)''')
         #c.execute('''CREATE INDEX if not exists index_event_e ON event (e)''')
         c.close()
+    def _execute(self, stmt, *args):
+        c = self.conn.cursor()
+        c.execute(stmt, *args)
+        return c
     def add_event(self, t, e, w=1.0):
         c = self.conn.cursor()
         c.execute("INSERT INTO event VALUES (?, ?, ?)", (t, e, w))
@@ -63,6 +67,10 @@ class Events(object):
     def n_distinct_events(self):
         c = self.conn.cursor()
         c.execute("SELECT count( DISTINCT e ) from event")
+        return c.fetchone()[0]
+    def count_interval(self, low, high):
+        c = self.conn.cursor()
+        c.execute("SELECT count(*) FROM event WHERE ?<=t AND t <?", (low, high))
         return c.fetchone()[0]
     def iter_distinct_events(self):
         c = self.conn.cursor()
