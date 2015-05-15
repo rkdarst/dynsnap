@@ -3,7 +3,7 @@
 import argparse
 import collections
 import datetime
-from math import floor, log10
+from math import floor, log10, sqrt
 import sqlite3
 import sys
 
@@ -68,6 +68,18 @@ class WeightedSet(object):
             if x not in data:    data[x] = w
             else:                data[x] += w
         return self._from_data(data)
+    def dot(self, other):
+        """Dot product of two sets (as vectors)"""
+        if len(self._data) <= len(other._data):
+            A, B = self._data, other._data
+        else:
+            A, B = other._data, self._data
+        # A is the smaller set
+        return sum(w*B.get(x, 0.0) for x, w in A.iteritems())
+    def norm(self):
+        """Norm of this set (as vector)"""
+        return sqrt(sum(w*w for w in self._data.itervalues()))
+
 
 def test_weightedset():
     from nose.tools import assert_equal
@@ -99,6 +111,7 @@ class SnapshotFinder(object):
     log_dt_max = None
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
+                 measure='esjacc',
                  dtmode='log', peakfinder='longest',
                  args={},
                  dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
@@ -109,6 +122,7 @@ class SnapshotFinder(object):
             args = args.__dict__
         self.args = args
         self.weighted = weighted
+        self.measure = getattr(self, 'measure_'+measure)
 
         if tstart is not None:    self.tstart = tstart
         else:                     self.tstart = evs.t_min()
@@ -207,6 +221,7 @@ class SnapshotFinder(object):
     # Different measurement functions: either Jaccard or NMI.  (Note:
     # NMI is old, was for graphs which is no longer supported).
     def measure_esjacc(self, es1s, es2s):
+        """Jaccard similarity of event sets.  Weighted or unweighted."""
         union = len(es1s | es2s)
         if union == 0:
             x = float('nan')
@@ -216,6 +231,7 @@ class SnapshotFinder(object):
             self._measure_data = (intersect, union, len(es1s), len(es2s))
         return x
     def measure_nmi(self, es1s, es2s):
+        """NMI similarity of event sets.  Graphs only, *not* implemented now."""
         g1 = nx.Graph(x for x in es1s)
         g2 = nx.Graph(x for x in es2s)
         g1lcc = g1.subgraph(nx.connected_components(g1)[0])
@@ -227,7 +243,14 @@ class SnapshotFinder(object):
         #nmi = pcd.cmtycmp.nmi(c1, c2)
         nmi = pcd.cmtycmp.F1_python2(c1, c2)
         return nmi
-    measure = measure_esjacc
+    def measure_cosine(self, es1s, es2s):
+        """Cosine similarity of event sets.  Weighted sets only."""
+        dot = es1s.dot(es2s)
+        norm1 = es1s.norm()
+        norm2 = es2s.norm()
+        cossim = dot/(norm1*norm2)
+        self._measure_data = (dot, norm1, norm2, len(es1s), len(es2s))
+        return cossim
 
 
     def iter_all_dts_linear(self):
@@ -453,6 +476,8 @@ class Plotter(object):
         self.finding_data = [ ]
         self.n_distinct = [ ]
         self.n_events = [ ]
+        self.sims = [ ]
+
     def add(self, finder):
         """Record state, for used in plotting"""
         tlow  = finder.interval_low
@@ -465,6 +490,7 @@ class Plotter(object):
                                finder.interval_high))
         self.n_distinct.append(len(finder.old_es))
         self.n_events.append(finder.old_n_events)
+        self.sims.append(finder.found_x_max)
     def plot(self, path, callback=None):
         """Do plotting.  Save to path.[pdf,png]"""
         # If we have no data, don't do anything:
@@ -502,6 +528,87 @@ class Plotter(object):
 
         mplutil.save_axes(fig, extra)
 
+    def plot2(self, path, callback=None, evs=None, convert_t=lambda t: t, **kwargs):
+        if len(self.points) == 0:
+            return
+        try:
+            import pcd.support.matplotlibutil as mplutil
+            raise ImportError
+        except ImportError:
+            import mplutil
+        fname = path + '.[pdf,png]'
+        fig, extra = mplutil.get_axes(fname, figsize=(10, 5),
+                                      ret_fig=True)
+        ax = fig.add_subplot(1, 1, 1)
+        #ax2 = fig.add_subplot(2, 1, 2)
+        ax2 = ax.twinx()
+        ax.set_xlabel('time')
+        ax.set_ylabel('Local event density')
+        #ax.set_xlabel('time')
+        ax2.set_ylabel('Similarity score')
+
+        x, y = zip(*self.points)
+
+        ax.set_xlim(convert_t(x[0]), convert_t(x[-1]))
+        ax2.set_xlim(convert_t(x[0]), convert_t(x[-1]))
+
+        #ls = ax.plot(x, y, '-o')
+        #for ts, xs, tlow, thigh in self.finding_data:
+        #    ls = ax2.plot(ts, xs, '-')
+        #    #ax.axvline(x=new_tstart, color=ls[0].get_color())
+        #    if self.args.get('annotate_peaks', False):
+        #        ax2.annotate(str(thigh), xy=(thigh, max(xs)))
+
+        import math
+        tlow = x[0]
+        thigh = x[-1]
+        data_size = thigh-tlow
+        interval = data_size/1000.
+        halfwidth = data_size/100
+        tlow = math.floor(tlow/interval)*interval
+        thigh = math.ceil(thigh/interval)*interval
+        domain = numpy.arange(tlow, thigh, interval)
+        #print domain
+        domain, densities = evs.event_density(domain=domain, halfwidth=halfwidth)
+        #domain = domain[densities != None]
+        densities = numpy.asarray(densities, dtype=float)
+        densities = numpy.divide(densities, halfwidth*2)
+        print sum(densities[numpy.isnan(densities)==False])
+        #import pdb ; pdb.set_trace()
+
+        import matplotlib.dates as mdates
+        #ax.format_xdata = mdates.DateFormatter("%Y-%m-%d:%H:%M")
+
+        # Transform domain into human-readable times, if wanted.
+        domain = [convert_t(t) for t in domain ]
+
+        # similarities
+        sims = self.sims
+        ts = [x[3] for x in self.finding_data ]
+        ls = ax2.plot([convert_t(t) for t in ts], sims, 'g-')
+        #for ts, xs, tlow, thigh in self.finding_data:
+        #    ls = ax2.plot([convert_t(t) for t in ts], sims, '-')
+
+        ls = ax.plot(domain, densities, '-')
+        #ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d:%H:%M"))
+        ax.set_yscale("log")
+        adf = ax.xaxis.get_major_formatter()
+        adf.scaled[1./(24*60)] = '%H:%M'  # set the < 1d scale to H:M
+        adf.scaled[1./24] = '%H:%M'  # set the < 1d scale to H:M
+        adf.scaled[1.0] = '%m-%d' # set the > 1d < 1m scale to Y-m-d
+        adf.scaled[30.] = '%Y-%m' # set the > 1m < 1Y scale to Y-m
+        adf.scaled[365.] = '%Y' # set the > 1y scale to Y
+
+        for ts, xs, tlow, thigh in self.finding_data:
+            ax.axvline(x=convert_t(thigh), color='k')
+
+        yearsFmt = mdates.DateFormatter('%Y')
+        #ax.xaxis_date()
+
+        if callback:
+            callback(locals())
+
+        mplutil.save_axes(fig, extra)
 
 
 def main(argv=sys.argv[1:], return_output=True, evs=None):
@@ -517,6 +624,8 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="benchmark model to simulate",)
     parser.add_argument("output", help="Output prefix", nargs='?')
+    parser.add_argument("--measure", default='esjacc',
+                        help="Similarity measure (esjacc, cosine)")
     parser.add_argument("--cache", action='store_true',
                         help="Cache input for efficiency")
     parser.add_argument("--regen", action='store_true',
@@ -576,6 +685,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
                             weighted=bool(args.w),
                             dtmode=args.dtmode,
                             peakfinder=args.peakfinder,
+                            measure=args.measure,
 
                             # linear options
                             dt_min   = args.dtmin,
@@ -591,10 +701,13 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
 
     # Time format specification (for output files and stdout)
     format_t = lambda x: x   # null formatter
+    convert_t = lambda x: x  # conversion to datetime object for plotting, if applicable
     if args.tformat == 'unixtime':
         # Formatter for unix time (seconds since 1970-01-01 00:00 UTC)
         format_t = lambda t: \
                    datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
+        convert_t = lambda t: \
+                   datetime.datetime.fromtimestamp(t)
     format_t_log = format_t
 
     print "# Total time range:", format_t(evs.t_min()), format_t(evs.t_max())
@@ -611,14 +724,14 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
         #
         fout_thresh = open(args.output+'.out.txt', 'w')
         fout_full = open(args.output+'.out.J.txt', 'w')
-        print >> fout_thresh, '#tlow thigh dt J len(old_es) measure_data'
-        print >> fout_full, '#t J dt measure_data'
+        print >> fout_thresh, '#tlow thigh dt sim len(old_es) measure_data'
+        print >> fout_full, '#t sim dt measure_data'
     if return_output or args.plot:
         plotter = Plotter(finder, args=args.__dict__)
 
     time_last_plot = time.time()
 
-    print '# Columns: tlow thigh dt J number_of_events'
+    print '# Columns: tlow thigh dt sim number_of_events'
     try:
       while True:
         x = finder.find()
@@ -639,7 +752,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
                   finder._measure_data
             print >> fout_full, '# t1=%s t2=%s dt=%s'%(format_t_log(tlow), format_t_log(thigh),
                                                        thigh-tlow)
-            print >> fout_full, '# J=%s'%val
+            print >> fout_full, '# sim=%s'%val
             print >> fout_full, '# len(old_es)=%s'%len(finder.old_es)
             #print >> fout, '# len(old_es)=%s'%len(finder.old_es)
             for i, t in enumerate(finder._finder_data['ts']):
@@ -654,19 +767,21 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
             plotter.add(finder)
             # Plot a checkpoint if we are taking a long time.
             if time.time() > time_last_plot + 300:
-                plotter.plot(args.output)
+                plotter.plot2(args.output, evs=evs, convert_t=convert_t)
                 time_last_plot = time.time()
     except KeyboardInterrupt:
         # finalize plotting then re-raise.
         if args.plot:
-            plotter.plot(args.output)
+            #plotter.plot(args.output)
+            plotter.plot2(args.output, evs=evs)
         raise
 
     if args.plot:
-        plotter.plot(args.output)
+        #plotter.plot(args.output)
+        plotter.plot2(args.output, evs=evs, convert_t=convert_t)
     if return_output:
         return output, dict(finder=finder,
-                            plotter=plotter)
+                            plotter=plotter, convert_t=convert_t)
 
 
 if __name__ == '__main__':

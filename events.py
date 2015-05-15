@@ -7,6 +7,8 @@ class ToInts(object):
         self._dat = { }
     def __call__(self, x):
         return self._dat.setdefault(x, len(self._dat))
+    def __len__(self):
+        return len(self._dat)
 
 class Events(object):
     def __init__(self, fname=':memory:', mode='r'):
@@ -22,6 +24,10 @@ class Events(object):
                      (t int not null, e int not null, w real)''')
         c.execute('''CREATE INDEX if not exists index_event_t ON event (t)''')
         #c.execute('''CREATE INDEX if not exists index_event_e ON event (e)''')
+        c.execute('''CREATE TABLE if not exists event_name
+                     (e INTEGER PRIMARY KEY, name TEXT)''')
+        c.execute('''CREATE VIEW IF NOT EXISTS view_event AS SELECT e, t, w, name
+                     FROM event LEFT JOIN event_name USING (e);''')
         c.close()
     def _execute(self, stmt, *args):
         c = self.conn.cursor()
@@ -99,7 +105,26 @@ class Events(object):
         c = self.conn.cursor()
         c.execute('''select t, e, w from event order by t''')
         return c
+    def event_density(self, domain, halfwidth):
+        """Return a local average of event density"""
+        #tlow = math.floor(tlow/interval)*interval
+        #thigh = math.ceil(thigh/interval)*interval
+        #domain = numpy.range(tlow, thigh+interval, interval)
+        c = self.conn.cursor()
+        vals = [ c.execute('''select sum(w) from event where ? <= t AND t < ?''',
+                      (x-halfwidth, x+halfwidth, )).fetchone()[0]
+                 for x in domain]
+        return domain, vals
 
+    def add_event_names(self, it):
+        """Store event names in database.
+
+        it: iterator of (event_id, event_name) tuples."""
+        if isinstance(it, dict):
+            it = ((eid, ename) for ename, eid in it.iteritems())
+        c = self.conn.cursor()
+        c.executemany('''INSERT INTO event_name VALUES (?, ?)''', it)
+        self.conn.commit()
 
 class _EventListSubset(object):
     def __init__(self, events, t_start):
