@@ -468,33 +468,33 @@ class SnapshotFinder(object):
 
 
 
-class Plotter(object):
+class Results(object):
     def __init__(self, finder, args=None):
         self.finder = finder
         self.args = args
-        self.points = [ ]
+        self.tlows = [ ]
+        self.thighs = [ ]
+        self.sims = [ ]
         self.finding_data = [ ]
         self.n_distinct = [ ]
         self.n_events = [ ]
-        self.sims = [ ]
 
     def add(self, finder):
         """Record state, for used in plotting"""
         tlow  = finder.interval_low
         thigh = finder.interval_high
-        self.points.append((tlow,  thigh-tlow))
-        self.points.append((thigh, thigh-tlow))
-        self.finding_data.append((finder._finder_data['ts'],
-                               finder._finder_data['xs'],
-                               finder.interval_low,
-                               finder.interval_high))
+        self.tlows.append(tlow)
+        self.thighs.append(thigh)
+        self.sims.append(finder.found_x_max)
         self.n_distinct.append(len(finder.old_es))
         self.n_events.append(finder.old_n_events)
-        self.sims.append(finder.found_x_max)
+        # The following things don't always need to be stored
+        self.finding_data.append((finder._finder_data['ts'],
+                                  finder._finder_data['xs']))
     def plot(self, path, callback=None):
         """Do plotting.  Save to path.[pdf,png]"""
         # If we have no data, don't do anything:
-        if len(self.points) == 0:
+        if len(self.tlows) == 0:
             return
         try:
             import pcd.support.matplotlibutil as mplutil
@@ -511,13 +511,17 @@ class Plotter(object):
         ax.set_xlabel('time')
         ax2.set_ylabel('Jaccard score (or measure)')
 
-        x, y = zip(*self.points)
+        points = [ ]
+        for tlow, thigh in zip(self.tlows, self.thighs):
+            points.append((tlow,  thigh-tlow))
+            points.append((thigh, thigh-tlow))
+        x, y = zip(*points)
 
-        ax.set_xlim(x[0], x[-1])
-        ax2.set_xlim(x[0], x[-1])
+        ax.set_xlim(self.tlows[0], self.thighs[-1])
+        ax2.set_xlim(self.tlows[0], self.thighs[-1])
 
         ls = ax.plot(x, y, '-o')
-        for ts, xs, tlow, thigh in self.finding_data:
+        for tlow, thigh, (ts, xs) in zip(self.tlows, self.thighs, self.finding_data):
             ls = ax2.plot(ts, xs, '-')
             #ax.axvline(x=new_tstart, color=ls[0].get_color())
             if self.args.get('annotate_peaks', False):
@@ -529,7 +533,7 @@ class Plotter(object):
         mplutil.save_axes(fig, extra)
 
     def plot2(self, path, callback=None, evs=None, convert_t=lambda t: t, **kwargs):
-        if len(self.points) == 0:
+        if len(self.tlows) == 0:
             return
         try:
             import pcd.support.matplotlibutil as mplutil
@@ -540,57 +544,34 @@ class Plotter(object):
         fig, extra = mplutil.get_axes(fname, figsize=(10, 5),
                                       ret_fig=True)
         ax = fig.add_subplot(1, 1, 1)
-        #ax2 = fig.add_subplot(2, 1, 2)
         ax2 = ax.twinx()
         ax.set_xlabel('time')
         ax.set_ylabel('Local event density')
-        #ax.set_xlabel('time')
         ax2.set_ylabel('Similarity score')
 
-        x, y = zip(*self.points)
+        ax.set_xlim(convert_t(self.tlows[0]), convert_t(self.thighs[-1]))
+        #ax2.set_xlim(self.tlows[0], self.thighs[-1])
 
-        ax.set_xlim(convert_t(x[0]), convert_t(x[-1]))
-        ax2.set_xlim(convert_t(x[0]), convert_t(x[-1]))
-
-        #ls = ax.plot(x, y, '-o')
-        #for ts, xs, tlow, thigh in self.finding_data:
-        #    ls = ax2.plot(ts, xs, '-')
-        #    #ax.axvline(x=new_tstart, color=ls[0].get_color())
-        #    if self.args.get('annotate_peaks', False):
-        #        ax2.annotate(str(thigh), xy=(thigh, max(xs)))
-
+        # Calculate local event density for the plot
         import math
-        tlow = x[0]
-        thigh = x[-1]
+        tlow = self.tlows[0]
+        thigh = self.thighs[-1]
         data_size = thigh-tlow
         interval = data_size/1000.
         halfwidth = data_size/100
         tlow = math.floor(tlow/interval)*interval
         thigh = math.ceil(thigh/interval)*interval
         domain = numpy.arange(tlow, thigh, interval)
-        #print domain
         domain, densities = evs.event_density(domain=domain, halfwidth=halfwidth)
-        #domain = domain[densities != None]
         densities = numpy.asarray(densities, dtype=float)
         densities = numpy.divide(densities, halfwidth*2)
-        print sum(densities[numpy.isnan(densities)==False])
-        #import pdb ; pdb.set_trace()
-
-        import matplotlib.dates as mdates
-        #ax.format_xdata = mdates.DateFormatter("%Y-%m-%d:%H:%M")
+        #print sum(densities[numpy.isnan(densities)==False])
 
         # Transform domain into human-readable times, if wanted.
         domain = [convert_t(t) for t in domain ]
 
-        # similarities
-        sims = self.sims
-        ts = [x[3] for x in self.finding_data ]
-        ls = ax2.plot([convert_t(t) for t in ts], sims, 'g-')
-        #for ts, xs, tlow, thigh in self.finding_data:
-        #    ls = ax2.plot([convert_t(t) for t in ts], sims, '-')
-
+        # Plot local density.
         ls = ax.plot(domain, densities, '-')
-        #ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d:%H:%M"))
         ax.set_yscale("log")
         adf = ax.xaxis.get_major_formatter()
         adf.scaled[1./(24*60)] = '%H:%M'  # set the < 1d scale to H:M
@@ -599,11 +580,14 @@ class Plotter(object):
         adf.scaled[30.] = '%Y-%m' # set the > 1m < 1Y scale to Y-m
         adf.scaled[365.] = '%Y' # set the > 1y scale to Y
 
-        for ts, xs, tlow, thigh in self.finding_data:
-            ax.axvline(x=convert_t(thigh), color='k')
+        # Plot similarities
+        ts = self.thighs
+        sims = self.sims
+        ls = ax2.plot([convert_t(t) for t in ts], sims, 'g-')
 
-        yearsFmt = mdates.DateFormatter('%Y')
-        #ax.xaxis_date()
+        # Plot vertical lines for intervals
+        for thigh in ts:
+            ax.axvline(x=convert_t(thigh), color='k', linewidth=.5)
 
         if callback:
             callback(locals())
@@ -678,7 +662,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
                           regen=args.regen,
                           unordered=args.unordered,
                           grouped=args.grouped)
-        print "# file loaded: args.input"
+        print "# file loaded:", args.input
 
     finder = SnapshotFinder(evs, tstart=args.tstart, tstop=args.tstop,
                             args=args,
@@ -727,7 +711,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
         print >> fout_thresh, '#tlow thigh dt sim len(old_es) measure_data'
         print >> fout_full, '#t sim dt measure_data'
     if return_output or args.plot:
-        plotter = Plotter(finder, args=args.__dict__)
+        results = Results(finder, args=args.__dict__)
 
     time_last_plot = time.time()
 
@@ -764,24 +748,24 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
             fout_full.flush()
 
         if return_output or args.plot:
-            plotter.add(finder)
+            results.add(finder)
             # Plot a checkpoint if we are taking a long time.
             if time.time() > time_last_plot + 300:
-                plotter.plot2(args.output, evs=evs, convert_t=convert_t)
+                results.plot2(args.output, evs=evs, convert_t=convert_t)
                 time_last_plot = time.time()
     except KeyboardInterrupt:
         # finalize plotting then re-raise.
         if args.plot:
-            #plotter.plot(args.output)
-            plotter.plot2(args.output, evs=evs)
+            #results.plot(args.output)
+            results.plot2(args.output, evs=evs)
         raise
 
     if args.plot:
-        #plotter.plot(args.output)
-        plotter.plot2(args.output, evs=evs, convert_t=convert_t)
+        #results.plot(args.output)
+        results.plot2(args.output, evs=evs, convert_t=convert_t)
     if return_output:
         return output, dict(finder=finder,
-                            plotter=plotter, convert_t=convert_t)
+                            results=results, convert_t=convert_t)
 
 
 if __name__ == '__main__':
