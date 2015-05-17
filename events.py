@@ -11,23 +11,33 @@ class ToInts(object):
         return len(self._dat)
 
 class Events(object):
-    def __init__(self, fname=':memory:', mode='r'):
+    """Event storage database.
+    """
+    table = 'event'
+    def __init__(self, fname=':memory:', mode='r', table=None):
         #if fname == ':memory:' and mode == 'r':
         #    raise ValueError("For fname=':memory:', you probably want mode='rw'")
+        if table is not None:
+            self.table = table
+        elif os.path.exists(fname.rsplit(':',1)[0]):
+            fname, self.table = fname.rsplit(':',1)
+
         if mode == 'r' and not os.path.exists(fname):
             raise ValueError("File does not exist: %s"%fname)
         self.conn = sqlite3.connect(fname)
 
         c = self.conn.cursor()
 
-        c.execute('''CREATE TABLE if not exists event
-                     (t int not null, e int not null, w real)''')
-        c.execute('''CREATE INDEX if not exists index_event_t ON event (t)''')
+        c.execute('''CREATE TABLE if not exists %s
+                     (t int not null, e int not null, w real)'''%self.table)
+        c.execute('''CREATE INDEX if not exists index_%s_t ON %s (t)'''%(
+            self.table, self.table))
         #c.execute('''CREATE INDEX if not exists index_event_e ON event (e)''')
         c.execute('''CREATE TABLE if not exists event_name
                      (e INTEGER PRIMARY KEY, name TEXT)''')
-        c.execute('''CREATE VIEW IF NOT EXISTS view_event AS SELECT e, t, w, name
-                     FROM event LEFT JOIN event_name USING (e);''')
+        c.execute('''CREATE VIEW IF NOT EXISTS view_%s AS SELECT e, t, w, name
+                     FROM %s LEFT JOIN event_name USING (e);'''%(self.table, self.table))
+        self.conn.commit()
         c.close()
     def _execute(self, stmt, *args):
         c = self.conn.cursor()
@@ -35,57 +45,57 @@ class Events(object):
         return c
     def add_event(self, t, e, w=1.0):
         c = self.conn.cursor()
-        c.execute("INSERT INTO event VALUES (?, ?, ?)", (t, e, w))
+        c.execute("INSERT INTO %s VALUES (?, ?, ?)"%self.table, (t, e, w))
         self.conn.commit()
     def add_events(self, it):
         c = self.conn.cursor()
-        c.executemany("INSERT INTO event VALUES (?, ?, ?)", it)
+        c.executemany("INSERT INTO %s VALUES (?, ?, ?)"%self.table, it)
         self.conn.commit()
     def t_min(self):
         c = self.conn.cursor()
-        c.execute("SELECT min(t) from event")
+        c.execute("SELECT min(t) from %s"%self.table)
         return c.fetchone()[0]
     def t_max(self):
         c = self.conn.cursor()
-        c.execute("SELECT max(t) from event")
+        c.execute("SELECT max(t) from %s"%self.table)
         return c.fetchone()[0]
     def times_next(self, tmin, range=None):
         """Return distinct times after t."""
         c = self.conn.cursor()
         if range:
-            c.execute("SELECT distinct t from event where ?<t<=? "
-                      "order by t", (tmin, tmin+range))
+            c.execute("SELECT distinct t from %s where ?<t<=? "
+                      "order by t"%self.table, (tmin, tmin+range))
         else:
-            c.execute("SELECT distinct t from event where ?<t "
-                      "order by t", (tmin, ))
+            c.execute("SELECT distinct t from %s where ?<t "
+                      "order by t"%self.table, (tmin, ))
         for row in c:
             yield row[0]
     def dump(self):
         c = self.conn.cursor()
-        c.execute("SELECT t,e,w from event")
+        c.execute("SELECT t,e,w from %s"%self.table)
         for row in c:
             print row[0], row[1], row[2]
 
     def __len__(self):
         c = self.conn.cursor()
-        c.execute("SELECT count(*) from event")
+        c.execute("SELECT count(*) from %s"%self.table)
         return c.fetchone()[0]
     def n_distinct_events(self):
         c = self.conn.cursor()
-        c.execute("SELECT count( DISTINCT e ) from event")
+        c.execute("SELECT count( DISTINCT e ) from %s"%self.table)
         return c.fetchone()[0]
     def count_interval(self, low, high):
         c = self.conn.cursor()
-        c.execute("SELECT count(*) FROM event WHERE ?<=t AND t <?", (low, high))
+        c.execute("SELECT count(*) FROM %s WHERE ?<=t AND t <?"%self.table, (low, high))
         return c.fetchone()[0]
     def iter_distinct_events(self):
         c = self.conn.cursor()
-        c.execute("SELECT DISTINCT e from event")
+        c.execute("SELECT DISTINCT e from %s"%self.table)
         for (e,) in c:
             yield e
     def iter_ordered_of_event(self, e):
         c = self.conn.cursor()
-        c.execute("SELECT DISTINCT t, w from event where e=?", (e, ))
+        c.execute("SELECT DISTINCT t, w from %s where e=?"%self.table, (e, ))
         return c
 
 
@@ -96,14 +106,14 @@ class Events(object):
         c = self.conn.cursor()
         if interval.stop is not None:
             # Actual slice.
-            c.execute('''select t, e, w from event where ? <= t AND t < ?''',
+            c.execute('''select t, e, w from %s where ? <= t AND t < ?'''%self.table,
                       (interval.start, interval.stop, ))
             return c
         else:
             return _EventsListSubset(self, interval.start)
     def iter_ordered(self):
         c = self.conn.cursor()
-        c.execute('''select t, e, w from event order by t''')
+        c.execute('''select t, e, w from %s order by t'''%self.table)
         return c
     def event_density(self, domain, halfwidth):
         """Return a local average of event density"""
@@ -111,7 +121,7 @@ class Events(object):
         #thigh = math.ceil(thigh/interval)*interval
         #domain = numpy.range(tlow, thigh+interval, interval)
         c = self.conn.cursor()
-        vals = [ c.execute('''select sum(w) from event where ? <= t AND t < ?''',
+        vals = [ c.execute('''select sum(w) from %s where ? <= t AND t < ?'''%self.table,
                       (x-halfwidth, x+halfwidth, )).fetchone()[0]
                  for x in domain]
         return domain, vals
@@ -135,7 +145,7 @@ class _EventListSubset(object):
         assert interval.start is None
         assert interval.stop is not None
 
-        c.execute('''select t, e, w from event where ? <= t AND t < ?''',
+        c.execute('''select t, e, w from %s where ? <= t AND t < ?'''%self.events.table,
                   (self.t_start, interval.stop, ))
         return c
 
@@ -145,12 +155,11 @@ import os
 def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 unordered=False, grouped=False, cache_fname=None,
                 cols_data=None):
-    if os.path.exists(fname):
-        try:
-            evs = Events(fname)
-            return evs
-        except sqlite3.DatabaseError:
-            pass
+    try:
+        evs = Events(fname, mode='r')
+        return evs
+    except sqlite3.DatabaseError:
+        pass
 
     events = { }
     def _iter():
