@@ -222,13 +222,14 @@ class SnapshotFinder(object):
     # NMI is old, was for graphs which is no longer supported).
     def measure_esjacc(self, es1s, es2s):
         """Jaccard similarity of event sets.  Weighted or unweighted."""
-        union = len(es1s | es2s)
+        union = (es1s | es2s).__len__()
         if union == 0:
             x = float('nan')
+            self._measure_data = (0, 0, es1s.__len__(), es2s.__len__())
         else:
-            intersect = len(es1s & es2s)
+            intersect = (es1s & es2s).__len__()
             x = intersect / float(union)
-            self._measure_data = (intersect, union, len(es1s), len(es2s))
+            self._measure_data = (intersect, union, es1s.__len__(), es2s.__len__())
         return x
     def measure_nmi(self, es1s, es2s):
         """NMI similarity of event sets.  Graphs only, *not* implemented now."""
