@@ -135,6 +135,16 @@ class Events(object):
         c = self.conn.cursor()
         c.executemany('''INSERT INTO event_name VALUES (?, ?)''', it)
         self.conn.commit()
+    def get_event_names(self, it):
+        c = self.conn.cursor()
+        if hasattr(it, '__iter__'):
+            names = [c.execute("""SELECT name FROM event_name WHERE e=?""", (x,)).fetchone()[0]
+                     for x in it]
+            return names
+        names = c.execute("""SELECT name FROM event_name WHERE e=?""",
+                         (it, )).fetchall()
+        return names[0][0]
+
 
 class _EventListSubset(object):
     def __init__(self, events, t_start):
