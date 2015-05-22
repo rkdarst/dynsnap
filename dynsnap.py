@@ -631,6 +631,8 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
                         help="Weight column")
     parser.add_argument("-p", "--plot", action='store_true',
                         help="Plot also?")
+    parser.add_argument("-i", "--interact", action='store_true',
+                        help="Interact with results in IPython after calculation")
 
     parser.add_argument("--tformat")
     parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
@@ -698,6 +700,8 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
     print "# Total time range:", format_t(evs.t_min()), format_t(evs.t_max())
     #evs.dump()
 
+    if args.interact:
+        return_output = True
     if return_output:
         output = [ ]
     if args.output:
@@ -764,6 +768,9 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
     if args.plot:
         #results.plot(args.output)
         results.plot2(args.output, evs=evs, convert_t=convert_t)
+    if args.interact:
+        import IPython
+        IPython.embed()
     if return_output:
         return output, dict(finder=finder,
                             results=results, convert_t=convert_t)
