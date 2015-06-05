@@ -608,6 +608,58 @@ class Results(object):
             callback(locals())
 
         mplutil.save_axes(fig, extra)
+    def tf_idf(self, evs, n=10):
+        """TF-IDF analysis of intervals.
+
+        This functions calculates the term frequency-inverse document
+        frequency of events within intervals.  This allows one to see
+        the most characteristic events within each interval.
+
+        Term frequency: fraction of term weights each term occupies
+        within an interval.  This does consider weights always.
+
+        Inverse document frequency: -log10(n/N), N=total intervals,
+        n=intervals containing term.  Events occuring in all intervals
+        are excluded from analysis.  This does not consider weights.
+
+        The returned value is the product of both of these.  The top
+        10 terms are returned.
+        """
+        # calculate document frequency for each term.
+        dfs = collections.defaultdict(int)
+        for tlow, thigh in zip(self.tlows, self.thighs):
+            c = evs._execute("""SELECT DISTINCT e from %s WHERE ?<=t AND t<?"""%evs.table,
+                             (tlow, thigh))
+            for (e, ) in c:
+                dfs[e] += 1
+        # make the logarithmic DF
+        for e in dfs:
+            #if dfs[e] == float(len(self.tlows)):
+            #    print dfs[e], float(len(self.tlows)), -log10(dfs[e]/float(len(self.tlows))), \
+            #          evs.get_event_names(e)
+            dfs[e] = -log10(dfs[e]/float(len(self.tlows)))
+        dfs = dict(dfs)
+        # For each interval, compute TFIDF
+        import heapq
+        return_data = [ ]
+        for tlow, thigh in zip(self.tlows, self.thighs):
+            total_terms = evs._execute("""SELECT sum(w) from %s WHERE ?<=t AND t<? """%evs.table,
+                             (tlow, thigh)).fetchone()[0]
+
+            c = evs._execute("""SELECT e, count(*), sum(w)/? from %s WHERE ?<=t AND t<? GROUP BY e"""%evs.table,
+                             (total_terms, tlow, thigh))
+            tfs = dict(c.fetchall())
+            items = [  ]
+            mostcommon = heapq.nlargest(10,
+                                        ((tf*dfs[e], e) for e, tf in tfs.iteritems() if dfs[e]!=0),
+                                        key=lambda x: x[0])
+            names = evs.get_event_names(zip(*mostcommon)[1])
+            #print tlow, thigh
+            #for (tfidf, e), name in zip(mostcommon, names):
+            #    print "    %5.2f %d %s"%(tfidf, tfs[e], name)
+            return_data.append((tfidf, name) for (tfidf, e), name in zip(mostcommon, names))
+        return return_data
+
 
 
 def main(argv=sys.argv[1:], return_output=True, evs=None):
@@ -782,6 +834,16 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
     if args.plot:
         #results.plot(args.output)
         results.plot2(args.output, evs=evs, convert_t=convert_t)
+    # print TFIDF data:
+    if args.output:
+        tfidfs = results.tf_idf(evs, n=10)
+        fout_tfidf = open(args.output+'.out.tfidf.txt', 'w')
+        print >> fout_tfidf, '#tlow thigh dt tfidf term'
+        for (tlow, thigh, terms) in zip(results.tlows, results.thighs, tfidfs):
+            print >> fout_tfidf, format_t_log(tlow), format_t_log(thigh), thigh-tlow, '-', '-'
+            for x, name in terms:
+                print >> fout_tfidf, '-', '-', '-', x, name.encode('utf-8')
+
     if args.interact:
         import IPython
         IPython.embed()
