@@ -76,6 +76,14 @@ class WeightedSet(object):
             A, B = other._data, self._data
         # A is the smaller set
         return sum(w*B.get(x, 0.0) for x, w in A.iteritems())
+    def dot_uw(self, other):
+        """Dot product of two sets (as vectors), unweighted"""
+        if len(self._data) <= len(other._data):
+            A, B = self._data, other._data
+        else:
+            A, B = other._data, self._data
+        # A is the smaller set
+        return sum(1 for x, w in A.iteritems() if x in B)
     def norm(self):
         """Norm of this set (as vector)"""
         return sqrt(sum(w*w for w in self._data.itervalues()))
@@ -251,6 +259,12 @@ class SnapshotFinder(object):
         norm2 = es2s.norm()
         cossim = dot/(norm1*norm2)
         self._measure_data = (dot, norm1, norm2, len(es1s), len(es2s))
+        return cossim
+    def measure_cosine_uw(self, es1s, es2s):
+        """Cosine similarity of event sets, as unweighted sets."""
+        dot = len(es1s & es2s)
+        cossim = dot/sqrt(len(es1s) * len(es2s))
+        self._measure_data = (dot, len(es1s), len(es2s))
         return cossim
 
 
