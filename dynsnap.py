@@ -131,6 +131,7 @@ class SnapshotFinder(object):
         self.args = args
         self.weighted = weighted
         self.measure = getattr(self, 'measure_'+measure)
+        self.last_dt_max = 0
 
         if tstart is not None:    self.tstart = tstart
         else:                     self.tstart = evs.t_min()
@@ -159,7 +160,7 @@ class SnapshotFinder(object):
         #self.log_dt_max = log_dt_max
         if self.dt_min   is None:    self.dt_min   = self.dt_step
         if self.dt_max   is None:    self.dt_max   = 1000*self.dt_step
-        if self.dt_extra is None:    self.dt_extra = 50*self.dt_step
+        #if self.dt_extra is None:    self.dt_extra = 50*self.dt_step
 
 
     # Two generalized set-making functions.  These take an iterator
@@ -308,7 +309,7 @@ class SnapshotFinder(object):
             dt = i * base_scale
             yield dt
             i += int(10**( max(0, int(log10(i))-log_precision)  ))
-            if self.log_dt_max and dt > self.log_dt_max: break
+            #if self.log_dt_max and dt > self.log_dt_max: break
             #if self.tstart + dt > self.tstop: break  # moved to find()
     def iter_all_dts_event(self):
         """Iterate dts that actually exist.
@@ -348,11 +349,12 @@ class SnapshotFinder(object):
         i_max_reversed = numpy.argmax(xs_array_reversedview)
         i_max = len(xs) - 1 - i_max_reversed
 
-        dt_extra_ = self.dt_extra
-        if not dt_extra_:
-            dt_extra_ = 2*dt
+        #dt_extra_ = self.dt_extra
+        #if not dt_extra_:
+        dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max])
+        #dt_extra_ = min(86400*5, self.tstart + 100*dts[i_max])
 
-        if dt > dts[i_max] + dt_extra_:
+        if len(dts) > 10 and dt > dts[i_max] + dt_extra_:
             raise self.StopSearch(i_max)
         return i_max
     def pick_best_dt_greedy(self, dt, dts, xs):
@@ -442,6 +444,7 @@ class SnapshotFinder(object):
         # loop above.  Rerun the lines below to save this again.
         es1s, es2s = self.get(dt_max)
         self.measure(es1s, es2s) # rerun to store correct self._measure_data
+        self.last_dt_max = dt_max
 
         # Clean up, save old edge set.
         old_tstart = self.interval_low = self.tstart
