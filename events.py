@@ -39,6 +39,13 @@ class Events(object):
                      FROM %s LEFT JOIN event_name USING (e);'''%(self.table, self.table))
         self.conn.commit()
         c.close()
+    def load(self):
+        """Load all events into memory"""
+        conn2 = sqlite3.connect(':memory:')
+        conn2.executescript("\n".join(self.conn.iterdump()))
+        self.conn.close()
+        self.conn = conn2
+
     def _execute(self, stmt, *args):
         c = self.conn.cursor()
         c.execute(stmt, *args)
