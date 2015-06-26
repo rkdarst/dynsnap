@@ -19,7 +19,7 @@ class Events(object):
         #    raise ValueError("For fname=':memory:', you probably want mode='rw'")
         if table is not None:
             self.table = table
-        elif os.path.exists(fname.rsplit(':',1)[0]):
+        elif ':' in fname and os.path.exists(fname.rsplit(':',1)[0]):
             fname, self.table = fname.rsplit(':',1)
 
         if mode == 'r' and not os.path.exists(fname):
@@ -136,7 +136,7 @@ class Events(object):
     def add_event_names(self, it):
         """Store event names in database.
 
-        it: iterator of (event_id, event_name) tuples."""
+        it: iterator of (event_name, event_id) tuples."""
         if isinstance(it, dict):
             it = ((eid, ename) for ename, eid in it.iteritems())
         c = self.conn.cursor()
@@ -145,8 +145,11 @@ class Events(object):
     def get_event_names(self, it):
         c = self.conn.cursor()
         if hasattr(it, '__iter__'):
-            names = [c.execute("""SELECT name FROM event_name WHERE e=?""", (x,)).fetchone()[0]
-                     for x in it]
+            names = [ ]
+            for eid in it:
+                row = c.execute("""SELECT name FROM event_name WHERE e=?""", (eid,)).fetchone()
+                if not row: continue
+                names.append(row[0])
             return names
         names = c.execute("""SELECT name FROM event_name WHERE e=?""",
                          (it, )).fetchall()
@@ -249,6 +252,7 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
         cache_fname = ':memory:'
     ev = Events(cache_fname, mode='rw')
     ev.add_events(_iter())
+    ev.add_event_names(events)
     return ev
 
 def main(argv=sys.argv):
