@@ -770,7 +770,8 @@ group.add_argument("--log-dtmin", type=float,)
 group.add_argument("--log-dtmax", type=float,)
 
 
-def main(argv=sys.argv[1:], return_output=True, evs=None):
+def main(argv=sys.argv[1:], return_output=True, evs=None,
+         convert_t=None):
     from itertools import product
     import math
     import numpy
@@ -813,13 +814,20 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
 
     # Time format specification (for output files and stdout)
     format_t = lambda x: x   # null formatter
-    convert_t = lambda x: x  # conversion to datetime object for plotting, if applicable
-    if args.tformat == 'unixtime':
+    if convert_t is not None:
+        pass
+        format_t = lambda t: \
+                   convert_t(t).strftime('%Y-%m-%d_%H:%M:%S')
+    elif args.tformat == 'unixtime':
         # Formatter for unix time (seconds since 1970-01-01 00:00 UTC)
         format_t = lambda t: \
                    datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
         convert_t = lambda t: \
                    datetime.datetime.fromtimestamp(t)
+    elif args.tformat:
+        raise ValueError('Unknown --tformat: %s'%args.tformat)
+    else:
+        convert_t = lambda x: x  # conversion to datetime object for plotting, if applicable
     format_t_log = format_t
 
     print "# Total time range:", format_t(evs.t_min()), format_t(evs.t_max())
@@ -907,6 +915,27 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
     if return_output:
         return output, dict(finder=finder,
                             results=results, convert_t=convert_t)
+
+def run_dual(argv=sys.argv[1:], return_output=True, evs=None,
+             ax1=None, ax2=None,
+             convert_t=None):
+    results_uw = main(argv=argv,                return_output=True, evs=evs, convert_t=convert_t)
+    results_w  = main(argv=argv + ['-w', '-1'], return_output=True, evs=evs, convert_t=convert_t)
+
+    if not ax1:
+        raise ValueError('Output to file not implemented yet.')
+
+    results_uw[1]['results'].plot_similarities(ax1,
+                                    convert_t=results_uw[1]['convert_t'])
+    results_w[1]['results'].plot_similarities(ax2,
+                                    convert_t=results_w[1]['convert_t'])
+
+    results_uw[1]['results'].plot_intervals(ax1,
+                                    convert_t=results_uw[1]['convert_t'])
+    results_w[1]['results'].plot_intervals(ax2,
+                                    convert_t=results_w[1]['convert_t'])
+
+    return results_uw, results_w
 
 
 if __name__ == '__main__':
