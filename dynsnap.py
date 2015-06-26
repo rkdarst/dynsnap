@@ -349,10 +349,11 @@ class SnapshotFinder(object):
         i_max_reversed = numpy.argmax(xs_array_reversedview)
         i_max = len(xs) - 1 - i_max_reversed
 
-        #dt_extra_ = self.dt_extra
-        #if not dt_extra_:
-        dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max])
-        #dt_extra_ = min(86400*5, self.tstart + 100*dts[i_max])
+        if self.dt_extra:
+            dt_extra_ = self.dt_extra
+        else:
+            dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max])
+            #dt_extra_ = min(86400*5, self.tstart + 100*dts[i_max])
 
         if len(dts) > 10 and dt > dts[i_max] + dt_extra_:
             raise self.StopSearch(i_max)
