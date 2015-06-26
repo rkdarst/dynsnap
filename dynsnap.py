@@ -510,7 +510,7 @@ class Results(object):
         # The following things don't always need to be stored
         self.finding_data.append((finder._finder_data['ts'],
                                   finder._finder_data['xs']))
-    def plot(self, path, callback=None):
+    def plot(self, path, callback=None, **kwargs):
         """Do plotting.  Save to path.[pdf,png]"""
         # If we have no data, don't do anything:
         if len(self.tlows) == 0:
@@ -550,6 +550,54 @@ class Results(object):
             callback(locals())
 
         mplutil.save_axes(fig, extra)
+
+    def plot_density(self, ax, evs,
+                     convert_t=lambda t: t,
+                     style='-',
+                     **kwargs):
+        """Create local event density and plot it on an axis."""
+        # Calculate local event density for the plot
+        import math
+        tlow = self.tlows[0]
+        thigh = self.thighs[-1]
+        data_size = thigh-tlow
+        interval = data_size/1000.
+        halfwidth = data_size/100
+        tlow = math.floor(tlow/interval)*interval
+        thigh = math.ceil(thigh/interval)*interval
+        domain = numpy.arange(tlow, thigh, interval)
+        domain, densities = evs.event_density(domain=domain, halfwidth=halfwidth)
+        domain = [convert_t(x) for x in domain]
+        densities = numpy.asarray(densities, dtype=float)
+        densities = numpy.divide(densities, halfwidth*2)
+        #print sum(densities[numpy.isnan(densities)==False])
+        ls = ax.plot(domain, densities, '-')
+        return ls
+
+    def plot_similarities(self, ax,
+                          convert_t=lambda t: t,
+                          style='g-'):
+        # Plot similarities
+        ts = self.thighs
+        sims = self.sims
+        ls = ax.plot([convert_t(t) for t in ts], sims, style)
+        return ls
+    def plot_intervals(self, ax,
+                       convert_t=lambda t: t,
+                       style='g-'):
+        ts = self.thighs
+        # Plot vertical lines for intervals
+        lines = [ ]
+        for thigh in ts:
+            ls = ax.axvline(x=convert_t(thigh), color='k', linewidth=.5)
+            lines.append(ls)
+        return lines
+    def plot_actual(self, ax,
+                    convert_t=lambda t: t,
+                    style='o', color='red'):
+        for e, label in major_events:
+            #ax.axvline(x=e, color='red')
+            ax.plot([convert_t(e)], 1, 'o', color='red')
 
     def plot2(self, path, callback=None, evs=None, convert_t=lambda t: t, **kwargs):
         if len(self.tlows) == 0:
@@ -593,11 +641,12 @@ class Results(object):
         ls = ax.plot(domain, densities, '-')
         ax.set_yscale("log")
         adf = ax.xaxis.get_major_formatter()
-        adf.scaled[1./(24*60)] = '%H:%M'  # set the < 1d scale to H:M
-        adf.scaled[1./24] = '%H:%M'  # set the < 1d scale to H:M
-        adf.scaled[1.0] = '%m-%d' # set the > 1d < 1m scale to Y-m-d
-        adf.scaled[30.] = '%Y-%m' # set the > 1m < 1Y scale to Y-m
-        adf.scaled[365.] = '%Y' # set the > 1y scale to Y
+        if hasattr(adf, 'scaled'):
+            adf.scaled[1./(24*60)] = '%H:%M'  # set the < 1d scale to H:M
+            adf.scaled[1./24] = '%H:%M'  # set the < 1d scale to H:M
+            adf.scaled[1.0] = '%m-%d' # set the > 1d < 1m scale to Y-m-d
+            adf.scaled[30.] = '%Y-%m' # set the > 1m < 1Y scale to Y-m
+            adf.scaled[365.] = '%Y' # set the > 1y scale to Y
 
         # Plot similarities
         ts = self.thighs
@@ -693,6 +742,8 @@ parser.add_argument("-w", type=int, default=None,
                     help="Weight column")
 parser.add_argument("-p", "--plot", action='store_true',
                     help="Plot also?")
+parser.add_argument("--plotstyle", default='plot2',
+                    help="Plot style")
 parser.add_argument("-i", "--interact", action='store_true',
                     help="Interact with results in IPython after calculation")
 
@@ -829,19 +880,17 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
         if return_output or args.plot:
             results.add(finder)
             # Plot a checkpoint if we are taking a long time.
-            if time.time() > time_last_plot + 300:
-                results.plot2(args.output, evs=evs, convert_t=convert_t)
+            if args.plot and time.time() > time_last_plot + 300:
+                getattr(results, args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
                 time_last_plot = time.time()
     except KeyboardInterrupt:
         # finalize plotting then re-raise.
         if args.plot:
-            #results.plot(args.output)
-            results.plot2(args.output, evs=evs)
+            getattr(results, args.plotstyle)(args.output, evs=evs)
         raise
 
     if args.plot:
-        #results.plot(args.output)
-        results.plot2(args.output, evs=evs, convert_t=convert_t)
+        getattr(results, args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
     # print TFIDF data:
     if args.output:
         tfidfs = results.tf_idf(evs, n=10)
