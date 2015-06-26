@@ -699,14 +699,17 @@ class Results(object):
             total_terms = evs._execute("""SELECT sum(w) from %s WHERE ?<=t AND t<? """%evs.table,
                              (tlow, thigh)).fetchone()[0]
 
-            c = evs._execute("""SELECT e, count(*), sum(w)/? from %s WHERE ?<=t AND t<? GROUP BY e"""%evs.table,
+            c = evs._execute("""SELECT e, sum(w)/? from %s WHERE ?<=t AND t<? GROUP BY e"""%evs.table,
                              (total_terms, tlow, thigh))
             tfs = dict(c.fetchall())
             items = [  ]
             mostcommon = heapq.nlargest(10,
                                         ((tf*dfs[e], e) for e, tf in tfs.iteritems() if dfs[e]!=0),
                                         key=lambda x: x[0])
-            names = evs.get_event_names(zip(*mostcommon)[1])
+            if mostcommon:
+                names = evs.get_event_names(zip(*mostcommon)[1])
+            else:
+                names = [ ]
             #print tlow, thigh
             #for (tfidf, e), name in zip(mostcommon, names):
             #    print "    %5.2f %d %s"%(tfidf, tfs[e], name)
