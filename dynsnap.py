@@ -666,6 +666,59 @@ class Results(object):
 
 
 
+# Main argument parser.  Left here becaues it is used in multiple
+# functions.
+parser = argparse.ArgumentParser()
+parser.add_argument("input", help="benchmark model to simulate",)
+parser.add_argument("output", help="Output prefix", nargs='?')
+parser.add_argument("--measure", default='esjacc',
+                    help="Similarity measure (esjacc, cosine)")
+parser.add_argument("--cache", action='store_true',
+                    help="Cache input for efficiency")
+parser.add_argument("--regen", action='store_true',
+                    help="Recreate temporal event cache")
+parser.add_argument("--unordered", action='store_true',
+                    help="Event columns on the line are unordered")
+parser.add_argument("--grouped", action='store_true',
+                    help="Each line contains different space-separated "
+                    "events.")
+parser.add_argument("--dont-merge-first", action='store_false',
+                    default=True, dest="merge_first",
+                    help="Each line contains different space-separated "
+                    "events.")
+
+parser.add_argument("-t",  type=int, default=0,
+                    help="Time column")
+parser.add_argument("-w", type=int, default=None,
+                    help="Weight column")
+parser.add_argument("-p", "--plot", action='store_true',
+                    help="Plot also?")
+parser.add_argument("-i", "--interact", action='store_true',
+                    help="Interact with results in IPython after calculation")
+
+parser.add_argument("--tformat")
+parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
+parser.add_argument("--tstop", type=float, help="Time to end analysis.")
+parser.add_argument("--dtmode", default='log',
+                    help="dt search pattern (linear, log, event) "
+                         "(default: %(default)s)")
+parser.add_argument("--peakfinder", default='longest',
+                    help="How to select peak of Jaccard similarity. "
+                         "(shortest, longest, greedy) "
+                         "(default=%(default)s)")
+
+group = parser.add_argument_group("Linear time options (must specify --dtmode=linear)")
+group.add_argument("--dtstep", type=float, default=SnapshotFinder.dt_step,
+                   help="step size for dt scanning. (default=%(default)s)")
+group.add_argument("--dtmin", type=float, help="(default=DTSTEP)")
+group.add_argument("--dtmax", type=float, help="(default=1000*DTSTEP)")
+group.add_argument("--dtextra", type=float, help="(default=50*DTSTEP)")
+
+group = parser.add_argument_group("Logarithmic time options (with --dtmode=log)")
+group.add_argument("--log-dtmin", type=float,)
+group.add_argument("--log-dtmax", type=float,)
+
+
 def main(argv=sys.argv[1:], return_output=True, evs=None):
     from itertools import product
     import math
@@ -676,55 +729,6 @@ def main(argv=sys.argv[1:], return_output=True, evs=None):
 
     import networkx
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="benchmark model to simulate",)
-    parser.add_argument("output", help="Output prefix", nargs='?')
-    parser.add_argument("--measure", default='esjacc',
-                        help="Similarity measure (esjacc, cosine)")
-    parser.add_argument("--cache", action='store_true',
-                        help="Cache input for efficiency")
-    parser.add_argument("--regen", action='store_true',
-                        help="Recreate temporal event cache")
-    parser.add_argument("--unordered", action='store_true',
-                        help="Event columns on the line are unordered")
-    parser.add_argument("--grouped", action='store_true',
-                        help="Each line contains different space-separated "
-                        "events.")
-    parser.add_argument("--dont-merge-first", action='store_false',
-                        default=True, dest="merge_first",
-                        help="Each line contains different space-separated "
-                        "events.")
-
-    parser.add_argument("-t",  type=int, default=0,
-                        help="Time column")
-    parser.add_argument("-w", type=int, default=None,
-                        help="Weight column")
-    parser.add_argument("-p", "--plot", action='store_true',
-                        help="Plot also?")
-    parser.add_argument("-i", "--interact", action='store_true',
-                        help="Interact with results in IPython after calculation")
-
-    parser.add_argument("--tformat")
-    parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
-    parser.add_argument("--tstop", type=float, help="Time to end analysis.")
-    parser.add_argument("--dtmode", default='log',
-                        help="dt search pattern (linear, log, event) "
-                             "(default: %(default)s)")
-    parser.add_argument("--peakfinder", default='longest',
-                        help="How to select peak of Jaccard similarity. "
-                             "(shortest, longest, greedy) "
-                             "(default=%(default)s)")
-
-    group = parser.add_argument_group("Linear time options (must specify --dtmode=linear)")
-    group.add_argument("--dtstep", type=float, default=SnapshotFinder.dt_step,
-                       help="step size for dt scanning. (default=%(default)s)")
-    group.add_argument("--dtmin", type=float, help="(default=DTSTEP)")
-    group.add_argument("--dtmax", type=float, help="(default=1000*DTSTEP)")
-    group.add_argument("--dtextra", type=float, help="(default=50*DTSTEP)")
-
-    group = parser.add_argument_group("Logarithmic time options (with --dtmode=log)")
-    group.add_argument("--log-dtmin", type=float,)
-    group.add_argument("--log-dtmax", type=float,)
 
     args = parser.parse_args(args=argv)
     #print args
