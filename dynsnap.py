@@ -427,16 +427,29 @@ class SnapshotFinder(object):
         # In the case below, we have a continually increasing jacc,
         # which indicates that there was some extreme event.  In this
         # case, we restart completly.
-        if (xs[i_max] == xs[-1]
-              #and xs[i_max] == xs[-1]
-              and xs[i_max] == 0
-              and self.old_es is not None):
+        if ((.95*xs[i_max] <= xs[-1])
+            and self.old_es is not None and self.tstart+dts[-1] < self.tstop-.001):
             print "### critical event detected at t=%s"%self.tstart
             # At this point, we have had an extreme event and we
             # should restart from zero.
-            self.old_es = None # Remove old interval.  We need a fresh
-                               # restart.
-            return self.find()
+            # Save some old values to use when recalculating things.
+            old_tstart = self.tstart
+            prev_es = self.old_es
+            # Remove old interval.  We need a fresh restart as in the
+            # beginning of the calculation.
+            self.old_es = None
+            # Do the actual finding.  Save return since that is the
+            # signature we need to return in the end.
+            ret_val =  self.find()
+            # The following things need to be re-calculated since the
+            # eself.find is comparing the two initial intervals, and
+            # not the previos interval and this interval.  Note that
+            # not everything is being updated!  So far, nly
+            # self.found_x_max is.
+            self.found_x_max = self.measure(prev_es, self.old_es)
+            #self.last_dt_max = self.tstart - old_tstart # not updated
+            return ret_val
+
 
         #print xs
         dt_max = self.found_dt_max = dts[i_max]
