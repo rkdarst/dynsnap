@@ -578,7 +578,7 @@ class Results(object):
                           convert_t=lambda t: t,
                           style='g-'):
         # Plot similarities
-        ts = self.thighs
+        ts = self.tlows[:1] + self.thighs[:-1]
         sims = self.sims
         ls = ax.plot([convert_t(t) for t in ts], sims, style)
         return ls
