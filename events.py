@@ -122,14 +122,16 @@ class Events(object):
         c = self.conn.cursor()
         c.execute('''select t, e, w from %s order by t'''%self.table)
         return c
-    def event_density(self, domain, halfwidth):
+    def event_density(self, domain, halfwidth, low=None, high=None):
         """Return a local average of event density"""
         #tlow = math.floor(tlow/interval)*interval
         #thigh = math.ceil(thigh/interval)*interval
         #domain = numpy.range(tlow, thigh+interval, interval)
         c = self.conn.cursor()
+        if low  is None: low  = halfwidth
+        if high is None: high = halfwidth
         vals = [ c.execute('''select sum(w) from %s where ? <= t AND t < ?'''%self.table,
-                      (x-halfwidth, x+halfwidth, )).fetchone()[0]
+                      (x-low, x+high, )).fetchone()[0]
                  for x in domain]
         return domain, vals
 
