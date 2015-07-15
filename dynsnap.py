@@ -427,6 +427,7 @@ class SnapshotFinder(object):
         # In the case below, we have a continually increasing jacc,
         # which indicates that there was some extreme event.  In this
         # case, we restart completly.
+        self.t_crit = False
         if ((.95*xs[i_max] <= xs[-1])
             and self.old_es is not None and self.tstart+dts[-1] < self.tstop-.001):
             print "### critical event detected at t=%s"%self.tstart
@@ -441,6 +442,7 @@ class SnapshotFinder(object):
             # Do the actual finding.  Save return since that is the
             # signature we need to return in the end.
             ret_val =  self.find()
+            self.t_crit = True
             # The following things need to be re-calculated since the
             # eself.find is comparing the two initial intervals, and
             # not the previos interval and this interval.  Note that
@@ -510,6 +512,7 @@ class Results(object):
         self.finding_data = [ ]
         self.n_distinct = [ ]
         self.n_events = [ ]
+        self.t_crit = [ ]
 
     def add(self, finder):
         """Record state, for used in plotting"""
@@ -523,6 +526,8 @@ class Results(object):
         # The following things don't always need to be stored
         self.finding_data.append((finder._finder_data['ts'],
                                   finder._finder_data['xs']))
+        if finder.t_crit:
+            self.t_crit.append(finder.interval_low)
     def plot(self, path, callback=None, **kwargs):
         """Do plotting.  Save to path.[pdf,png]"""
         # If we have no data, don't do anything:
