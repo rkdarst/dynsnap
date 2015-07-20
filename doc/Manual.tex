@@ -1,0 +1,229 @@
+\documentclass{article}
+
+\title{Dynamic segmentation algorithm}
+
+\begin{document}
+\maketitle
+
+\section{Components}
+
+Dynamic segmentation consists of the following layers.  Each layer is
+reasonably independent of others, allowing a large amount of
+configurability and independent improvement for each layer.  This
+allows the algorithm to be easily extended to new situations or types
+of data.  Many layers have several options for use.  This document
+describes each of them.
+
+This document is designed to explain algorithms in a scientifically
+reproducible manner.  A usage manual is included separately.
+
+\section{Data input}
+\label{sec:meth-input}
+There is little scientific novelty in data input.  For a full
+reference, please see the user manual.
+
+\section{Data representation}
+\label{sec:meth-representation}
+At the lowest level, all data is a multiset of \texttt{(time, id,
+  weight)} tuples for each event.  If data is unweighted, all weights
+can be stored as $1$.  All time ranges are considered half-open
+intervals $[t_1, t_2)$.
+
+When using data in an unweighted fashion, an interval is considered to
+be a set (with elements of effective unit weight) containing the IDs
+of any event present within the interval.  At present non-positive
+weights are not allowed so semantics are consistent.
+
+When using data in a weighted fashion, an interval is considered to be
+a weighted set containing event IDs for all any event within the
+interval.  Weights are the sum of weights of all events within that
+interval.  For data which has events of unit weight, the interval
+weights are thus the counts of events within the intervals.
+
+The above semantics are valid for  the similarity measures we
+implement, but could be changed for others.
+
+
+\section{Similarity measure}
+\label{sec:meth-similarity}
+
+Various similarity measures are defined between any two intervals.
+They are defined as a function between two (possibly weighted) sets of
+the two intervals as defined above, with a resulting value in the
+interval $[0,1]$.  A $1$ similarity defines a perfect match.
+
+In the following examples, consider $A$ to be the set of events of the
+first interval and $B$ to be the set of the second interval.  Whether
+or not these are weighted is context-dependent.
+
+\subsection{Unweighted Jaccard}
+This is a measure between two unweighted sets.  It is the standard
+jaccard score,
+\begin{equation}
+  \label{eq:jaccard}
+  J(A,B) = \frac{|A \cap B|}{|A \cup B|}.
+\end{equation}
+
+The Jaccard score is $1$ if two intervals have the same elements
+regardless of the counts of those elements.
+
+\subsection{Weighted Jaccard}
+This is the logical extension of the Jaccard score to the intersection
+and union of weighted sets.  Weighted sets are defined by real-valued
+indicator functions $w_{i}$ defining the weight of each element within
+the set.  Any weights of zero are considered to not be contained in
+the set.  Conversely, any element not in the set has a weight of zero.
+A weighted union is defined to have elements of
+\begin{equation}
+  \label{eq:union}
+  w_{i,U} = \max(w_{i,A}, w_{i,B})
+\end{equation}
+over all element is either $A$ or $B$.  Here, $w_{i,U}$ is the
+indicator function for the union, and respectively for the sets $A$
+and $B$.  A weighted intersection is defined to have elements of
+\begin{equation}
+  w_{i,I} = \min(w_{i,A}, w_{i,B})
+\end{equation}
+with components analogous to Eq.~\ref{eq:union}.  With these
+definitions, the weighted Jaccard score is computed by using
+Eq.~\ref{eq:jaccard}.
+
+The weighted Jaccard score introduces a bias towards equal-size sets
+with equal element counts.  Thus, there is some ``inertia'' in
+interval sizes and can not adapt to changing timescale quickly.
+
+\subsection{Cosine similarity}
+The weighted sets can be considered (unordered) sparse vectors,
+allowing us to use the cosine similarity.  Defined in terms of sets, the
+cosine similarity is
+\begin{equation}
+  C(A,B)
+    = {A \dot B} \over { |A| |B| }
+    = {{ \sum(w_{i,A}  w_{i,B}) }    \over   { sum(w_{i,A}) sum(w_{i,B}) }}.
+\end{equation}
+
+The cosine similarity takes into account event counts, but in a more
+flexible way than the weighted Jaccard score.  The cosine similarity can
+be $1$ if the sets are of unequal sizes, as long as the relative
+ratio of event weights is the same.
+
+
+\subsection{Unweighted cosine similarity}
+The unweighted cosine similarity is defined as
+\begin{equation}
+  C(A,B) = {|A \cap B|} \over {\sqrt( |A| |B| )}
+\end{equation}
+
+
+
+
+
+\section{Time iteration}
+\label{sec:meth-time}
+The time propagation forms the core of the algorithm.  It provides an
+efficient, linear time method of segmenting the time range.  We must
+generate a series of intervals $A$, $B$, $C$ segmenting time into
+self-similar blocks.  Each interval contains times within the
+half-open interval $[t_1, t_2)$.
+
+
+\subsection{First step}
+\label{sec:meth-firststep}
+We begin with an initial time $t_0$, which is the lower bound of our
+first interval.  If this is not provided by the user, it is set to the
+time of the first event.  A test sequence of $\Delta t$s are generated
+via some method (see Sec.~\ref{sec:meth-dt}).  With this, we compute
+the intervals $ A(\Delta t) = [t_0, t_0+\Delta t)$ and $A'(\Delta t) =
+[t_0+\Delta t, t_0+2\Delta t)$ for each $\Delta t$.  We then computer
+our similarity score (Sec.~\ref{sec:meth-similarity}) between $A$ and
+$A'$ as a function of $\Delta t$
+\begin{eqnarray}
+  J(\Delta t) &=& J(A(\Delta t), A'(\Delta t)) \nonumber \\
+              &=& J([t_0, t_0+\Delta t),  [t_0+\Delta t, t_0+2\Delta t)).
+              \label{eq:J-max}
+\end{eqnarray}
+In the above, we are loose in notation: the time interval is used
+interchangeably with the set of events within that interval.  The
+similarity score $J$ can be any from Sec.~\ref{sec:meth-similarity}.
+Eq.~\ref{eq:J-max} is maximized as a function of $\Delta t$ to produce
+$\Delta t^*$, our optimal and chosen interval size.
+
+Once $\Delta t^*$ is found, the first interval $A$ is set to $[t_0,
+t_0+\Delta t)$.  This interval is now fixed, and the the
+starting time is updated $t_0 = t_0+\Delta t$ and we proceed to the
+propagation step.
+
+\subsubsection{Merge first two intervals}
+\label{sec:meth-mergefirst}
+Optionally, the \textit{merge initial intervals} process can be done.
+In this process, in the initial step, the first two intervals detected
+($A$ and $A'$) are merged into one double-sized interval.  Continuing
+from Sec.~\ref{sec:meth-firststep}, after $\Delta t^*$ is calculated,
+the first interval $A$ is set to $[t_0, t_0+2\Delta t^*$, and the new
+starting time set to $t_0 = t_0 + 2\Delta t$.
+
+This rule avoids calculating the second interval twice, but the first
+interval is then twice the size of all other intervals.
+
+
+\subsection{Propagation step}
+\label{sec:meth-propagation}
+Given our previous interval $A$ and starting time $t_0$ at the end of
+$A$, we proceed similarly to the initial step.  We generate our series
+of $\Delta t$s and construct a series of $B$ intervals $t_0,
+t_0+\Delta t$ for all of them.  Analogously to the initial step, we
+compute the similarity score as a function of $\Delta t$,
+\begin{eqnarray}
+  J(\Delta t) &=& J(A, B(\Delta t)) \nonumber \\
+              &=& J(A,  [t_0, t_0+\Delta t)).
+              \label{eq:J-max2}
+\end{eqnarray}
+The $\Delta t^*$ which maximizes $J(\Delta t)$ is taken.  The next
+interval is set as $B = [t_0, t_0+\Delta t)$.
+
+We repeat the propogation step indefinitely, until we have covered all
+events in intervals.  For each iteration, we take the new $A = B$, and
+the new $t_0 = t_0+\Delta t$.
+
+
+
+\section{$\Delta t$ iteration}
+\label{sec:meth-dt}
+There are various methods to iterate $\Delta t$ values.  These can
+either produce a limited series of values or an infinite series.  If
+infinite, the loop is broken in the ``Maximum finding'' portion of the
+algorithm.
+
+\subsection{Linear scan mode}
+In this mode, the values $m+1d, m+2d, m+3d, ...$ are iterated.  The
+parameter $d$ is the step size (1 by default), and $m$ is the minimum
+step size (default to the same as $d$).  This method does not adapt to
+the data scale automatically.  Further, with very long scale data,
+this method is inefficient.
+
+\subsection{Logarithmic scan mode}
+In this mode, we begin with a base scale of
+\begin{equation}
+  m = 10^{\left\lfloor \log_10(e)  \right\rfloor}
+\end{equation}
+where $e$ is the smallest time interval to the next event after $t_0$.
+This is the greatest power of 10 less than the time to the next event.
+Then, beginning with $i=1$, we return the sequence of values
+\begin{equation}
+  1m, 2m, \ldots, 99m, 100m, 110m, 120m, \ldots, 990m, 1000m,
+  1100m, \ldots
+\end{equation}
+This produces a logarithmic time scale with reasonable precision at
+all points.
+
+
+\section{Maximum finding}
+\label{sec:meth-peak}
+The $\Delta t$ values are iterated by one of the methods from
+Sec.~\ref{sec:meth-dt}.  After each $\Delta t$ is returned and
+similarities calculated, we search for a peak.
+
+
+
+
+\end{document}
