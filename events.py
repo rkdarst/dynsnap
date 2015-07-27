@@ -183,6 +183,9 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
     except sqlite3.DatabaseError:
         pass
 
+    if isinstance(cols_data, str):
+        cols_data = tuple(int(x) for x in cols_data.split(','))
+
     events = { }
     def _iter():
         if fname == '-':
@@ -275,20 +278,17 @@ def main(argv=sys.argv):
     parser.add_argument("-w", type=int, default=None,
                         help="Weight column")
     parser.add_argument("--datacols", default="",
-                        help="Weight column")
+                        help="Columns containing the data"
+                            " (comma separated list)")
 
     args = parser.parse_args(argv[1:])
 
 
-    if args.datacols:
-        datacols = tuple(int(x) for x in args.datacols.split(','))
-    else:
-        datacols = None
     evs = load_events(args.input, col_time=args.t,
                       col_weight=args.w, cache_fname=args.cached_output,
                       unordered=args.unordered,
                       grouped=args.grouped,
-                      cols_data=datacols,
+                      cols_data=args.datacols,
                       cache=True)
 
 

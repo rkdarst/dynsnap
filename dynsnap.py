@@ -761,6 +761,9 @@ parser.add_argument("-t",  type=int, default=0,
                     help="Time column")
 parser.add_argument("-w", type=int, default=None,
                     help="Weight column")
+parser.add_argument("--datacols", default="",
+                    help="Columns containing the data"
+                         " (comma separated list)")
 parser.add_argument("-p", "--plot", action='store_true',
                     help="Plot also?")
 parser.add_argument("--plotstyle", default='2',
@@ -809,6 +812,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
     if evs is None:
         evs = load_events(args.input, col_time=args.t,
                           col_weight=args.w, cache=args.cache,
+                          cols_data=args.datacols,
                           regen=args.regen,
                           unordered=args.unordered,
                           grouped=args.grouped)
