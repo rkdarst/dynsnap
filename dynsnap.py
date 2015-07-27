@@ -119,7 +119,7 @@ class SnapshotFinder(object):
     log_dt_max = None
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
-                 measure='esjacc',
+                 measure='jacc',
                  dtmode='log', peakfinder='longest',
                  args={},
                  dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
@@ -229,7 +229,7 @@ class SnapshotFinder(object):
 
     # Different measurement functions: either Jaccard or NMI.  (Note:
     # NMI is old, was for graphs which is no longer supported).
-    def measure_esjacc(self, es1s, es2s):
+    def measure_jacc(self, es1s, es2s):
         """Jaccard similarity of event sets.  Weighted or unweighted."""
         union = (es1s | es2s).__len__()
         if union == 0:
@@ -741,8 +741,8 @@ class Results(object):
 parser = argparse.ArgumentParser()
 parser.add_argument("input", help="benchmark model to simulate",)
 parser.add_argument("output", help="Output prefix", nargs='?')
-parser.add_argument("--measure", default='esjacc',
-                    help="Similarity measure (esjacc, cosine)")
+parser.add_argument("--measure", default='jacc',
+                    help="Similarity measure (jacc, cosine, cosine_uw)")
 parser.add_argument("--cache", action='store_true',
                     help="Cache input for efficiency")
 parser.add_argument("--regen", action='store_true',
