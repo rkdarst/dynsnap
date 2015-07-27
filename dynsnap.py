@@ -528,7 +528,7 @@ class Results(object):
                                   finder._finder_data['xs']))
         if finder.t_crit:
             self.t_crit.append(finder.interval_low)
-    def plot(self, path, callback=None, **kwargs):
+    def plot_1(self, path, callback=None, **kwargs):
         """Do plotting.  Save to path.[pdf,png]"""
         # If we have no data, don't do anything:
         if len(self.tlows) == 0:
@@ -617,7 +617,7 @@ class Results(object):
             #ax.axvline(x=e, color='red')
             ax.plot([convert_t(e)], 1, 'o', color='red')
 
-    def plot2(self, path, callback=None, evs=None, convert_t=lambda t: t, **kwargs):
+    def plot_2(self, path, callback=None, evs=None, convert_t=lambda t: t, **kwargs):
         if len(self.tlows) == 0:
             return
         try:
@@ -763,8 +763,8 @@ parser.add_argument("-w", type=int, default=None,
                     help="Weight column")
 parser.add_argument("-p", "--plot", action='store_true',
                     help="Plot also?")
-parser.add_argument("--plotstyle", default='plot2',
-                    help="Plot style")
+parser.add_argument("--plotstyle", default='2',
+                    help="Plot style, '1', '2', or '3'.")
 parser.add_argument("-i", "--interact", action='store_true',
                     help="Interact with results in IPython after calculation")
 
@@ -910,16 +910,16 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
             results.add(finder)
             # Plot a checkpoint if we are taking a long time.
             if args.plot and time.time() > time_last_plot + 300:
-                getattr(results, args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
+                getattr(results, 'plot_'+args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
                 time_last_plot = time.time()
     except KeyboardInterrupt:
         # finalize plotting then re-raise.
         if args.plot:
-            getattr(results, args.plotstyle)(args.output, evs=evs)
+            getattr(results, 'plot_'+args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
         raise
 
     if args.plot:
-        getattr(results, args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
+        getattr(results, 'plot_'+args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
     # print TFIDF data:
     if args.output:
         tfidfs = results.tf_idf(evs, n=10)
