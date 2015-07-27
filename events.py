@@ -1,3 +1,17 @@
+"""Basic event handling.
+
+This module provides an Events class, that does the low-level event
+storage.  The function ``load_events`` handles most of the logic
+related to parsing and caching events.  It has some other analysis
+related to events, but this is not used anywhere (including our
+papers).
+
+If run on the command line, it provides an interface to the
+``load_events`` function.  This is implemented in the ``main``
+function (as opposed to the other main_* functions that do other
+calculations).
+"""
+
 import os
 import sqlite3
 import sys
@@ -177,15 +191,33 @@ import os
 def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 unordered=False, grouped=False, cache_fname=None,
                 cols_data=None):
+    """Load events from file into an Events object.
+
+    This function serves multiple purposes.  With just an input file,
+    it will parse and load the events.  It can also handle caching
+    those events to an sqlite3 database, opening those caches, and has
+    logic to automatically finding and loading caches if they exist.
+    In the future, some of these functions may separate from each
+    other, because this function does a little bit too much.
+
+    """
+    # Shortcut: if file already exists and is an Events object, simply
+    # return that and don't do anything.  This is what implements the
+    # from-cache loader system.
     try:
         evs = Events(fname, mode='r')
         return evs
     except sqlite3.DatabaseError:
         pass
 
+    # If cols_data is a string, convert to a tuple like is needed.
     if isinstance(cols_data, str):
         cols_data = tuple(int(x) for x in cols_data.split(','))
 
+    # Primary loop that reads the input file.  This operates as an
+    # iterator, and no code is executed directly in the next block.
+    # It also alters the 'events' dictionary, which converts things to
+    # ints.
     events = { }
     def _iter():
         if fname == '-':
@@ -243,6 +275,10 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 i = len(events)
                 events[e] = i
             yield t, i, w
+
+    # This logic handles opening and/or regenerating an existing
+    # cache.  The filename is not usually specified.  This should be
+    # eventually moved outside of this function.
     if cache:
         if cache_fname is None:
             cache_fname = fname + '.cache'
@@ -255,12 +291,15 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
             return ev
     else:
         cache_fname = ':memory:'
+    # This is where all the actual parsing happens.  Run through the
+    # iterator, loading it into sqlite3, and then save the original event names.
     ev = Events(cache_fname, mode='rw')
     ev.add_events(_iter())
     ev.add_event_names(events)
     return ev
 
 def main(argv=sys.argv):
+    """Main function for event caching"""
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -293,6 +332,7 @@ def main(argv=sys.argv):
 
 
 def main_summary(argv=sys.argv):
+    """Main function for producing other event summaries"""
     evs = Events(argv[1])
     print "Number of events: ", len(evs)
     print "Number of unique events: ", evs.n_distinct_events()
