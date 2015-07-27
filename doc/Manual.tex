@@ -1,4 +1,7 @@
-\documentclass{article}
+\documentclass[draft]{article}
+\usepackage{setspace}
+\doublespacing
+\usepackage[margin=3cm]{geometry}
 
 \title{Dynamic segmentation algorithm}
 
@@ -221,9 +224,57 @@ all points.
 \label{sec:meth-peak}
 The $\Delta t$ values are iterated by one of the methods from
 Sec.~\ref{sec:meth-dt}.  After each $\Delta t$ is returned and
-similarities calculated, we search for a peak.
+similarities calculated, we search for a peak.  To restate, this is
+operated in an on-line fashion.  The $\Delta t$ iteration
+(Sec.~\ref{sec:meth-dt}) produces a continuous stream of $\Delta t$
+values.  After each value is made, similarities of intervals are
+calculated (Sec.~\ref{sec:meth-similarity}).  Then, the list of all
+$\Delta t$ and similarities are processed by the methods of this
+section, which returns one of two answers: ``stop, we have a maximum
+of similarity and our next interval is fixed'' or ``continue iterating
+$\Delta t$ and searching''.
 
+\subsection{Longest}
 
+This method is the standard.  We search for the maximum similarity
+value $J$ within the similarity array.  If the maximum occurs more
+than once, we take the largest $\Delta t$ corresponding to any
+instance of that maximum $J$.  Let us call this $\Delta t^*$.  At this
+point, we have our interval.
+
+However, there could be a better $\Delta t$ in the future.  Thus, we
+must test $Delta t$s longer than the peak.  We do this by not
+returning an interval until we have tested all $\Delta t <
+25\Delta t^*$ and $\Delta t$ less than 25 times the previous round's
+$\Delta t$, if it exists.
+
+\subsection{Shortest}
+
+This is the same as the ``Longest'' method, however, it takes the
+shortest $\Delta t$ which matches with the greatest similarity.  This
+is the shortest time in the plateau.
+
+\subsection{Greedy}
+
+In this method, longer intervals are scanned as long as $J$ increases,
+but at the first decrease of $J$ the peak (the second to last $\Delta
+t$) is taken as $\Delta t^*$.
+
+\subsection{Critical event detection}
+\label{sec:meth-critical}
+At some times, the character of the entire analysis changes.  When
+this happens, the analysis should be restarted by not comparing with
+the previous interval.  Since there is by definition no similarity
+with the previous interval, the similarity scores are very low.  They
+are not zero, because as time passes there eventually become a few
+events in common.  Thus, the signature of critical events is low but
+continually increasing similarities with no peak.  Once a critical
+event occurs, the previous interval is forgotten and analysis begins
+as in Sec.~\ref{sec:meth-firststep}.
+
+If a) the similarity corresponding to the last $\Delta t$ is greater
+than 0.95 of the peak similarity and b) we have not reach the last
+event at the last $\Delta t$.
 
 
 \end{document}
