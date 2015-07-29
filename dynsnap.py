@@ -820,7 +820,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
 
     finder = SnapshotFinder(evs, tstart=args.tstart, tstop=args.tstop,
                             args=args,
-                            weighted=bool(args.w),
+                            weighted=(args.w is not None),
                             dtmode=args.dtmode,
                             peakfinder=args.peakfinder,
                             measure=args.measure,
