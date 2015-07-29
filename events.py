@@ -53,6 +53,23 @@ class Events(object):
                      FROM %s LEFT JOIN event_name USING (e);'''%(self.table, self.table))
         self.conn.commit()
         c.close()
+    def stats(self, convert_t=lambda x: x, tstart=None, tstop=None):
+        if tstart:
+            where = 'where %s <= t AND t < %s'%(tstart, tstop)
+        else:
+            where = ''
+        stats = [ ]
+        stats.append(("Number of events",
+                      self._execute('select count(w) from %s %s'%(self.table, where)).fetchone()[0]))
+        stats.append(("Number of distinct events",
+                      self._execute('select count(distinct e) from %s %s'%(self.table, where)).fetchone()[0]))
+        stats.append(("First event time",
+                      convert_t(self._execute('select min(t) from %s %s'%(self.table, where)).fetchone()[0])))
+        stats.append(("Last event time",
+                      convert_t(self._execute('select max(t) from %s %s'%(self.table, where)).fetchone()[0])))
+        stats.append(("Total count/weight of events",
+                      self._execute('select sum(w) from %s %s'%(self.table, where)).fetchone()[0]))
+        return stats
     def load(self):
         """Load all events into memory"""
         conn2 = sqlite3.connect(':memory:')

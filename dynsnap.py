@@ -752,6 +752,8 @@ parser.add_argument("--unordered", action='store_true',
 parser.add_argument("--grouped", action='store_true',
                     help="Each line contains different space-separated "
                     "events.")
+parser.add_argument("--stats", action='store_true',
+                    help="Don't do segmentation, just print stats on the data.")
 parser.add_argument("--dont-merge-first", action='store_false',
                     default=True, dest="merge_first",
                     help="Each line contains different space-separated "
@@ -854,6 +856,13 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
     else:
         convert_t = lambda x: x  # conversion to datetime object for plotting, if applicable
     format_t_log = format_t
+
+    # Print basic stats and exit, if requested.
+    if args.stats:
+        for a, b in evs.stats(convert_t=convert_t, tstart=args.tstart, tstop=args.tstop):
+            print a, b
+        exit(0)
+
 
     print "# Total time range:", format_t(evs.t_min()), format_t(evs.t_max())
     #evs.dump()

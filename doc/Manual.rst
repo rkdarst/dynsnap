@@ -138,6 +138,11 @@ User interaction options:
     according to this rule, and converted into the date and time.
     This is used for plotting and also for printing to stdout and the
     output files.
+--stats
+    Don't do anything, just print some stats on the data and exit.
+    Perhaps this option would be better placed in ``events.py``, but
+    here it can use the values from ``--tstart``, ``--tstop``, and
+    ``--tformat`` to make the results more useful.
 
 
 Options related to the segmentation algorithm:
