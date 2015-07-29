@@ -142,11 +142,19 @@ User interaction options:
 
 Options related to the segmentation algorithm:
 
+-w -1
+    Turn on weighted analysis, even if not reading from an input text
+    file.  Normally, this is used to specify the weight column in
+    input files.  However, if data is stored in the database but ``-w
+    -1`` is not given, unweighted sets will be used and the weights
+    are lost.  Basically, make sure that some form of the ``-w``
+    option is on the command line when you want to do use a weighted
+    similarity measure.
 --measure
     Specify similarity measure to use.  Options are ``jacc``,
     ``cosine``, or ``cosine_uw`` (unweighted).  Unfortunately, these
-    measures interact with the ``-w`` option for weights in a slightly
-    non-intuitive way.  The following should be done.
+    measures interact with the ``-w`` option.  The following explains
+    how to use each different measure.
 
     unweighted Jaccard
         Default option.  Do *not* specify ``-w``.
@@ -155,11 +163,7 @@ Options related to the segmentation algorithm:
     Cosine similarity
         ``--measure=cosine -w -1`` (or a column number for the weight option)
     Cosine similarity, unweighted
-        ``--measure=cosine_uw -w -1``.  Due to current internal
-	implementation, you must specify weighted set use with ``-w``
-	even when doing unweighted cosine similarity.  Weights are not
-	used.
-
+        ``--measure=cosine_uw``.
 --dont-merge-first
     Do not perform the "merge first two intervals" process.  By
     default, the first two intervals are merged.  It is recommended to
