@@ -925,7 +925,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
     if args.plot:
         getattr(results, 'plot_'+args.plotstyle)(args.output, evs=evs, convert_t=convert_t)
     # print TFIDF data:
-    if args.output:
+    if args.output and args.plot:
         tfidfs = results.tf_idf(evs, n=10)
         fout_tfidf = open(args.output+'.out.tfidf.txt', 'w')
         print >> fout_tfidf, '#tlow thigh dt tfidf term'
