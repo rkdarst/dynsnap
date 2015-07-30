@@ -147,14 +147,15 @@ User interaction options:
 
 Options related to the segmentation algorithm:
 
--w -1
-    Turn on weighted analysis, even if not reading from an input text
-    file.  Normally, this is used to specify the weight column in
-    input files.  However, if data is stored in the database but ``-w
-    -1`` is not given, unweighted sets will be used and the weights
-    are lost.  Basically, make sure that some form of the ``-w``
-    option is on the command line when you want to do use a weighted
-    similarity measure.
+-w N
+    Use as ``-w -1`` if running without a text file input.  Turn on
+    weighted analysis, even if not reading from an input text file.
+    Normally, this is used to specify the weight column in input
+    files.  However, if data is stored in the database but ``-w -1``
+    is not given, unweighted sets will be used and the weights are
+    lost.  Basically, make sure that some form of the ``-w`` option is
+    on the command line when you want to do use a weighted similarity
+    measure.
 --measure
     Specify similarity measure to use.  Options are ``jacc``,
     ``cosine``, or ``cosine_uw`` (unweighted).  Unfortunately, these
