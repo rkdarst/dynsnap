@@ -797,7 +797,7 @@ group.add_argument("--log-dtmax", type=float,)
 
 
 def main(argv=sys.argv[1:], return_output=True, evs=None,
-         convert_t=None):
+         convert_t=None, outsuffix=None):
     from itertools import product
     import math
     import numpy
@@ -810,6 +810,8 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
 
     args = parser.parse_args(args=argv)
     #print args
+    if outsuffix:
+        args.output = args.output + outsuffix
 
     if evs is None:
         evs = load_events(args.input, col_time=args.t,
@@ -953,20 +955,26 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
 def run_dual(argv=sys.argv[1:], return_output=True, evs=None,
              ax1=None, ax2=None,
              convert_t=None):
-    results_uw = main(argv=argv,                return_output=True, evs=evs, convert_t=convert_t)
-    results_w  = main(argv=argv + ['-w', '-1'], return_output=True, evs=evs, convert_t=convert_t)
+    results_uw = main(argv=argv,                return_output=True, evs=evs, convert_t=convert_t, outsuffix='_uw')
+    results_w = None
+    if ax2:
+        results_w  = main(argv=argv + ['-w', '-1'], return_output=True, evs=evs, convert_t=convert_t, outsuffix='_w')
+    else:
+        ax2 = None
 
     if not ax1:
         raise ValueError('Output to file not implemented yet.')
 
     results_uw[1]['results'].plot_similarities(ax1,
                                     convert_t=results_uw[1]['convert_t'])
-    results_w[1]['results'].plot_similarities(ax2,
+    if ax2:
+        results_w[1]['results'].plot_similarities(ax2,
                                     convert_t=results_w[1]['convert_t'])
 
     results_uw[1]['results'].plot_intervals(ax1,
                                     convert_t=results_uw[1]['convert_t'])
-    results_w[1]['results'].plot_intervals(ax2,
+    if ax2:
+        results_w[1]['results'].plot_intervals(ax2,
                                     convert_t=results_w[1]['convert_t'])
 
     return results_uw, results_w
