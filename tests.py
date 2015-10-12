@@ -14,7 +14,7 @@ class BaseTest(object):
     #m = models.model_func
     #ma = {'arg': 'value' }
     desc = None  # description for under the title
-    ann_pk = True   # Annotate the peaks in the output plot?
+    ann_pk = False   # Annotate the peaks in the output plot?
     ma = { }
 
 
@@ -41,7 +41,7 @@ class BaseTest(object):
                                         **finder_kwargs)
 
         if plot:
-            plotter = dynsnap.Plotter(finder,
+            results = dynsnap.Results(finder,
                       args=dict(annotate_peaks=self.ann_pk))
         # This is the core.  Iterate through until we are done wwith
         # all intervals.
@@ -59,7 +59,7 @@ class BaseTest(object):
 
 
             if plot:
-                plotter.add(finder)
+                results.add(finder)
 
             print t1, t2
 
@@ -78,14 +78,26 @@ class BaseTest(object):
 
                 # plot theoretical value
                 if hasattr(self, 'theory'):
+                  for i in (0, 1, 2):
+                    if i >= len(lcls['self'].tlows): continue
                     func = self.theory()
+                    dat = lcls['self'].finding_data[i]
+                    ts, xs = dat
+                    ts = ts
+                    tlow = lcls['self'].tlows[i]
+                    # First round treated differently from future rounds
+                    if i == 0:
+                        # First round
+                        print 'first round'
+                        tlow = lcls['self'].tlows[i]
+                        dt_prev = 'first'
+                    else:
+                        dt_prev = lcls['self'].thighs[i-1] - lcls['self'].tlows[i-1]
 
-                    dat = lcls['self'].finding_data[0]
-                    ts, xs, tlow, thigh = dat
-                    predicted_xs = [ func(t-tlow) for t in ts ]
+                    predicted_xs = [ func(dt_prev, t-tlow) for t in ts ]
                     lcls['ax2'].plot(ts, predicted_xs, 'o', color='red')
 
-            plotter.plot(output, callback=cb)
+            results.plot_1(output, callback=cb)
 
 
 T = BaseTest
@@ -154,9 +166,12 @@ class periodic1B(T):
 
 
 
-all_tests = [x for name, x in globals().items()
-             if isinstance(x, type) and issubclass(x, BaseTest) and x != BaseTest
-             and not name.startswith('_') ]
+all_tests = sorted((x for name, x in globals().items()
+                    if isinstance(x, type)
+                        and issubclass(x, BaseTest)
+                        and x != BaseTest
+                        and not name.startswith('_')),
+                    key=lambda x: x.__name__ )
 
 if __name__ == '__main__':
 
@@ -164,7 +179,7 @@ if __name__ == '__main__':
     to_run = sys.argv[1:]
     kwargs = dict(plot=True)
 
-    for test in sorted(all_tests):
+    for test in all_tests:
         name = test.__name__
 
         # Skip tests we don't want to run, if we specify this thing.
