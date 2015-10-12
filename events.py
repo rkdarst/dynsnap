@@ -171,10 +171,14 @@ class Events(object):
 
         it: iterator of (event_name, event_id) tuples."""
         if isinstance(it, dict):
-            it = ((eid, ename) for ename, eid in it.iteritems())
+            it = ((eid, repr(ename)) for ename, eid in it.iteritems())
         c = self.conn.cursor()
         c.executemany('''INSERT INTO event_name VALUES (?, ?)''', it)
         self.conn.commit()
+    def iter_event_names(self):
+        c = self.conn.cursor()
+        c.execute("""SELECT e, name FROM event_name""")
+        return c
     def get_event_names(self, it):
         c = self.conn.cursor()
         if hasattr(it, '__iter__'):
