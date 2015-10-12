@@ -124,15 +124,15 @@ class drift1C(T):
     m=models.drift; ma=dict(seed=13, c=0.00, p=.2, merge_first=False,
                             t_max=100, N=10000)
     def theory(self):
-        return lambda dt: models.J1(dt, Pe=partial(models.Pe, self.ma['p']))
+        return lambda dtP, dtN: models.J1(dtP, dtN, Pe=partial(models.Pe, self.ma['p']))
         #return partial(models.J1_c, self.ma['c'], self.ma['p'])
 class drift1D(T):
     m=models.drift; ma=dict(seed=13, t_crit=(200, 500))
 class drift1E(T):
     m=models.drift; ma=dict(seed=None, c=0.01, p=.2, merge_first=False,
-                            t_max=100, N=100000)
+                            t_max=100, N=10000)
     def theory(self):
-        return partial(models.J1_c, self.ma['c'], self.ma['p'])
+        return partial(models.J1_c, c=self.ma['c'], p=self.ma['p'])
 
 class drift1F(T):
     from pcd.support.powerlaw import PowerLaw

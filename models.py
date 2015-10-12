@@ -2,6 +2,7 @@ from itertools import product
 import math
 import numpy
 import random
+import scipy.stats as stats
 
 # convenience function
 rand = lambda rng: rng.uniform(0, 1)
@@ -139,8 +140,11 @@ def periodic(N=10000, p=.2, q=.2, c_scale=.01,
 #
 def Pe(p, dt):
     return 1.-((1.-p)**dt)
-def J1(dt, Pe):
-    return Pe(dt) / float(2-Pe(dt))
+def J1(dt_prev, dt, Pe):
+    if dt_prev == 'first':
+        dt_prev, dt = dt, dt
+    #return Pe(dt) / float(2-Pe(dt))
+    return Pe(dt_prev)*Pe(dt) / float(Pe(dt_prev) + Pe(dt) - Pe(dt_prev)*Pe(dt))
 import functools
 import operator
 from math import exp, log
@@ -157,7 +161,7 @@ def Pe_c(c, p, dt):
     return x
 def Pe_c_2(c, p, dt):
     pass
-def J1_c(c, p, dt):
+def J1_c(dt_prev, dt, c, p):
 
     left  = P_any( p * (1.-c)**(dt_-1)    for dt_ in range(1, dt+1)  )
     right = P_any( p * (1.-c)**(dt_)      for dt_ in range(1, dt+1)  )
@@ -177,6 +181,47 @@ def J1_c(c, p, dt):
 
     return isect / union
 
+def J1_c(dt_prev, dt, c, p):
+    if dt_prev == 'first':
+        dt_prev, dt = dt, dt
+    A_ = A(dt,c,p)
+    B_ = B(dt_prev,c,p)
+    I = (1-A_)*(1-B_)
+    U = (1-A_) + (1-B_) - I + A_extra(dt_prev,c,p) + A_extra(dt,c,p)
+    print dt, dt_prev, c, p, A_, B_, I, U
+    return I / float(U)
+
+def A(t, c, p):
+    cp = 1-c
+    return product(1-p*cp**(t) for t in range(int(t)) )
+def B(t, c, p):
+    cp = 1-c
+    return product(1-p*cp**(t+1) for t in range(int(t)) )
+# Tools for modeling
+# A(t) =   (t==1) ? (1-p)    : (A(t-1)*(1-p*cp**(t-1)))
+# B(t) =   (t==1) ? (1-p*cp) : (A(t-1)*(1-p*cp**(t)))
+# plot [0:200] ((1-A(x))*(1-B(x))) / ((1-A(x) + (1-B(x) - (1-A(x))*(1-B(x)))))
+def A(t, c, p):
+    # left
+    cp = 1-c
+    if t <= 1:
+        return 1-p
+    return A(t-1,c,p) * (1-p*cp**(t-1))
+def B(t, c, p):
+    # right
+    cp = 1-c
+    if t <= 1:
+        return 1-p*cp
+    return B(t-1,c,p) * (1-p*cp**(t))
+def A_extra(t, c, p):
+    P = 0
+    for n_replacement in range(int(t)):
+        if n_replacement <= 0: continue
+        P_n_replacement = stats.binom(t, c).pmf(n_replacement)
+        s = t / float(n_replacement)
+        #print n_replacement, t, n_replacement, s, P_n_replacement
+        P += P_n_replacement * (n_replacement-1) * (1-(1-p)**s)
+    return P*10
 
 
 if __name__ == "__main__":
