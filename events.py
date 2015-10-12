@@ -228,7 +228,7 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
         pass
 
     # If cols_data is a string, convert to a tuple like is needed.
-    if isinstance(cols_data, str):
+    if cols_data and isinstance(cols_data, str):
         cols_data = tuple(int(x) for x in cols_data.split(','))
 
     # Primary loop that reads the input file.  This operates as an
