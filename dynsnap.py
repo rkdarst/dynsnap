@@ -584,7 +584,9 @@ class Results(object):
         tlow = math.floor(tlow/interval)*interval
         thigh = math.ceil(thigh/interval)*interval
         domain = numpy.arange(tlow, thigh, interval)
-        domain, densities = evs.event_density(domain=domain, halfwidth=halfwidth)
+        #domain, densities = evs.event_density(domain=domain, halfwidth=halfwidth)
+        domain, densities = evs.event_density(domain=domain, halfwidth=None,
+                                              high=0, low=2*halfwidth)
         domain = [convert_t(x) for x in domain]
         densities = numpy.asarray(densities, dtype=float)
         densities = numpy.divide(densities, halfwidth*2)
