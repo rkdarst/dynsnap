@@ -812,7 +812,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
 
     args = parser.parse_args(args=argv)
     #print args
-    if outsuffix:
+    if outsuffix and args.output:
         args.output = args.output + outsuffix
 
     if evs is None:
