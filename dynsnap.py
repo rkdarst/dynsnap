@@ -374,7 +374,28 @@ class SnapshotFinder(object):
     def find(self):
         """Core snapshot finding method.
 
-        Returns (low, high) values."""
+        Returns (low, high) values.  This method can be repeatedly
+        called to do a segmentation, but most real use actually calls
+        the main() function.
+
+        Internal documentation about how this method works:
+
+        iter_all_dts(): Gives dt values to check.  Repeats indefinitely,
+        break happens in pick_best_dt().
+        - dt_min: starting dt (linear)
+        - dt_max: ending dt (linear)
+        - dt_step: step size (linear)
+        - log_dt_min: minimum log step size (log)
+        - (event: no parameters)
+
+        pick_best_dt(): picks the optimal dt value.
+        - Options are pick_best_dt_shortest, pick_best_dt_longest,
+          pick_best_dt_greedy.  The following options are defined:
+        - dt_extra: go at least this much father past peak (all)
+          - (shortest): default to 2*peak_dt
+          - (longest): default to 25*last_dt, 25*
+        - dt_search_min: minimum dt_extra (longest)
+        """
         # Our stop condition.  Returning None is a sentinel to the
         # caller stop the analysis.
         if self.tstart >= self.tstop:
