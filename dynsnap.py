@@ -521,10 +521,38 @@ class SnapshotFinder(object):
             self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
             self.interval_high = self.tstart
             return old_tstart, self.tstart
+    def find_uniform(self):
+        """Alternative version of find that returns uniform intervals.
 
-        #print "  %4d %3d %3d %s"%(self.tstart, dt_max, i_max, len(dts))
-
-
+        This can not be set via an option, but must be set by manual
+        code so far:
+          dynsnap.SnapshotFinder.find = dynsnap.SnapshotFinder.find_uniform
+          dynsnap.SnapshotFinder.dt_uniform = dt_uniform
+        """
+        # Uniform initialization
+        self.t_crit = False
+        if self.tstart >= self.tstop:
+            return None
+        # Propagation
+        old_tstart = self.tstart
+        self._finder_data = dict(xs=[], ts=[], dts=[],
+                                 measure_data=[])
+        es1s, es2s = self.get(self.dt_uniform)
+        x = self.measure(es1s, es2s)
+        #self._finder_data['xs'].append(x)
+        #self._finder_data['ts'].append(self.tstart+self.dt_uniform)
+        #self._finder_data['dts'].append(self.dt_uniform)
+        #self._finder_data['measure_data'].append(self._measure_data)
+        self.found_x_max = x
+        self.interval_low = old_tstart
+        self.tstart = self.tstart + self.dt_uniform
+        self.interval_high = self.tstart
+        self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
+        if self.old_es is None:
+            self.old_es = es1s
+        else:
+            self.old_es = es2s
+        return self.interval_low, self.interval_high
 
 class Results(object):
     def __init__(self, finder, args=None):
