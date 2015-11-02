@@ -117,6 +117,7 @@ class SnapshotFinder(object):
     dt_extra = None
     log_dt_min = None
     log_dt_max = None
+    dt_search_min = 0
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
                  measure='jacc',
@@ -124,6 +125,7 @@ class SnapshotFinder(object):
                  args={},
                  dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
                  log_dt_min=None, log_dt_max=None,
+                 dt_search_min=0,
                  ):
         self.evs = evs
         if isinstance(args, argparse.Namespace):
@@ -150,7 +152,7 @@ class SnapshotFinder(object):
 
         locals_ = locals()
         for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra',
-                     'log_dt_min', 'log_dt_max'):
+                     'log_dt_min', 'log_dt_max', 'dt_search_min'):
             if locals_[name] is not None:
                 setattr(self, name, locals_[name])
         #self.dt_min     = dt_min
@@ -352,8 +354,9 @@ class SnapshotFinder(object):
         if self.dt_extra:
             dt_extra_ = self.dt_extra
         else:
-            dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max])
+            dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max], self.dt_search_min)
             #dt_extra_ = min(86400*5, self.tstart + 100*dts[i_max])
+            #dt_extra_ = max(86400*600, dt_extra_)
 
         if len(dts) > 10 and dt > dts[i_max] + dt_extra_:
             raise self.StopSearch(i_max)
@@ -806,6 +809,9 @@ parser.add_argument("--peakfinder", default='longest',
                     help="How to select peak of Jaccard similarity. "
                          "(shortest, longest, greedy) "
                          "(default=%(default)s)")
+parser.add_argument("--dt-search-min", default=SnapshotFinder.dt_search_min,
+                   type=float, help="Minimum amount to seach on each "
+                                    "step (longest only).")
 
 group = parser.add_argument_group("Linear time options (must specify --dtmode=linear)")
 group.add_argument("--dtstep", type=float, default=SnapshotFinder.dt_step,
