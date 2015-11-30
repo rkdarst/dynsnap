@@ -52,6 +52,64 @@ def toy103(seed=None, **kwargs):
         for e in sorted(events2):
             yield t, e
 
+def demo01(seed=None, n=20, t=10, T=30, p=.5,
+           phase_active=[(0,1), (1, 2), (0, 2)],
+           phase_ps=None,
+           **kwargs):
+    rng = get_rng(seed)
+    for tt in range(T):
+        phase = (tt // t) % 3 # 0, 1, or 2
+        for e in range(n*2):
+            if not (phase_active[phase][0]*n <= e < phase_active[phase][1]*n):
+                continue
+            #if phase==1 and e < n: continue
+            if rand(rng) < (phase_ps[phase] if phase_ps else p):
+                yield tt, e
+
+def demo02(seed=None, N=50, t_phase=20, T=40, p=.5, c=.5,
+           phase_cs=[.02, .15],
+           c_func=None, p_func=None, **kwargs):
+    rng = get_rng(seed)
+
+    next_eid = [ N-1 ]  # events 0--(N-1) are in the initial set
+    def nextevent():
+        next_eid[0] += 1
+        return next_eid[0]
+    if c_func is None:
+        c_func = lambda : c
+    if p_func is None:
+        p_func = lambda : p
+    events = set(xrange(N))
+    #event_c = dict((e, c_func()) for e in events)
+    event_p = dict((e, p_func()) for e in events)
+
+    for t in xrange(T):
+        phase = (t // t_phase) % 3 # 0, 1, or 2
+        # critical events - all events change *before* t
+        #if t in t_crit:
+        #    events = set(nextevent() for _ in xrange(N))
+        #    event_c = dict((e, c_func()) for e in events)
+        #    event_p = dict((e, p_func()) for e in events)
+
+
+        # Yield events that occur now.
+        for e in events:
+            if rand(rng) < event_p[e]:
+                yield t, e
+
+        # Change events
+        changes = [ ]
+        for e in list(events):
+            #if rand(rng) < event_c[e]:
+            if rand(rng) < phase_cs[phase]:
+                changes.append(e)
+        for e in changes:
+            events.remove(e)
+            i = nextevent()
+            events.add(i)
+            #del event_c[e] ; event_c[i] = c_func()
+            del event_p[e] ; event_p[i] = p_func()
+
 
 def drift(N=1000, p=.2, c=.01,
           t_max=1000, seed=None,
@@ -222,6 +280,8 @@ def A_extra(t, c, p):
         #print n_replacement, t, n_replacement, s, P_n_replacement
         P += P_n_replacement * (n_replacement-1) * (1-(1-p)**s)
     return P*10
+
+
 
 
 if __name__ == "__main__":
