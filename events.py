@@ -36,7 +36,7 @@ class Events(object):
         elif ':' in fname and os.path.exists(fname.rsplit(':',1)[0]):
             fname, self.table = fname.rsplit(':',1)
 
-        if mode == 'r' and not os.path.exists(fname):
+        if mode == 'r' and not os.path.exists(fname) and not fname==':memory:':
             raise ValueError("File does not exist: %s"%fname)
         self.conn = sqlite3.connect(fname)
 
