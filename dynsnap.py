@@ -239,7 +239,8 @@ class SnapshotFinder(object):
             self._measure_data = (0, 0, es1s.__len__(), es2s.__len__())
         else:
             intersect = (es1s & es2s).__len__()
-            x = intersect / float(union)
+            alpha = 1
+            x = intersect / float(alpha*(union-intersect) + intersect)
             self._measure_data = (intersect, union, es1s.__len__(), es2s.__len__())
         return x
     def measure_nmi(self, es1s, es2s):
