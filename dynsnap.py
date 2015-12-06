@@ -118,6 +118,8 @@ class SnapshotFinder(object):
     log_dt_min = None
     log_dt_max = None
     dt_search_min = 0
+    dt_first_override = None
+
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
                  measure='jacc',
@@ -404,6 +406,24 @@ class SnapshotFinder(object):
         # caller stop the analysis.
         if self.tstart >= self.tstop:
             return None
+        # Do not do a search for the first interval but just select something.
+        if self.old_es is None and self.dt_first_override:
+            self.t_crit = False
+            self._finder_data = dict(xs=[], ts=[], dts=[],
+                                        measure_data=[])
+            es1s, es2s = self.get(self.dt_first_override)
+            x = self.measure(es1s, es2s)
+            self.found_x_max = x
+            old_tstart = self.tstart
+            self.interval_low = old_tstart
+            self.tstart = self.tstart + self.dt_first_override
+            self.interval_high = self.tstart
+            self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
+            if self.old_es is None:
+                self.old_es = es1s
+            return self.interval_low, self.interval_high
+
+
 
         dts = [ ]
         xs = [ ]
