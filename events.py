@@ -191,7 +191,13 @@ class Events(object):
         names = c.execute("""SELECT name FROM event_name WHERE e=?""",
                          (it, )).fetchall()
         return names[0][0]
-
+    def randomize_order(self):
+        import random
+        c = self.conn.cursor()
+        rowids, es = zip(*c.execute('SELECT rowid, e FROM event'))
+        es = list(es)
+        random.shuffle(es)
+        c.executemany('UPDATE event SET e=? WHERE rowid=?', zip(es, rowids))
 
 class _EventListSubset(object):
     def __init__(self, events, t_start):
