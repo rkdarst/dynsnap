@@ -3,7 +3,7 @@
 import argparse
 import collections
 import datetime
-from math import floor, log10, sqrt
+from math import floor, log, log10, sqrt
 import sqlite3
 import sys
 
@@ -641,6 +641,17 @@ class Results(object):
             callback(locals())
 
         mplutil.save_axes(fig, extra)
+    def plot_Jfinding(self, ax, convert_t=lambda t: t):
+        """Plot the J finding at every interval"""
+        xlow, xhigh = ax.get_xlim()
+        for tlow, thigh, (ts, xs) in zip(self.tlows, self.thighs,
+                                         self.finding_data):
+            ls = ax.plot([convert_t(t) for t in ts], xs, '-')
+            #ax.axvline(x=new_tstart, color=ls[0].get_color())
+            if self.args.get('annotate_peaks', False):
+                ax.annotate(str(convert_t(thigh)), xy=(convert_t(thigh), max(xs)))
+        ax.set_xlim(xlow, xhigh)
+        return ls
 
     def plot_density(self, ax, evs,
                      convert_t=lambda t: t,
@@ -653,7 +664,7 @@ class Results(object):
         thigh = self.thighs[-1]
         data_size = thigh-tlow
         interval = data_size/1000.
-        halfwidth = data_size/100
+        halfwidth = data_size/200
         tlow = math.floor(tlow/interval)*interval
         thigh = math.ceil(thigh/interval)*interval
         domain = numpy.arange(tlow, thigh, interval)
@@ -685,6 +696,38 @@ class Results(object):
             ls = ax.axvline(x=convert_t(thigh), color=(.21,.21,.21), linewidth=.5)
             lines.append(ls)
         return lines
+    def plot_intervals_patches(self, ax,
+                       convert_t=lambda t: t,
+                       style='g-'):
+        """Plot detected intervals as patches."""
+        import matplotlib.patches
+        import matplotlib.dates as mdates
+        if isinstance(convert_t(0), datetime.datetime):
+            def calc_width(high, low):
+                low = convert_t(low)
+                high = convert_t(high)
+                return mdates.date2num(high) - mdates.date2num(low)
+        else:
+            def calc_width(high, low):
+                return high-low
+        ylow, yhigh = ax.get_xlim()
+        ylow = 0
+        yhigh = 1
+        ts = self.thighs
+        if len(ts)%2 == 1: # if odd
+            ts = [self.tlows[0]] + ts
+        # Plot vertical lines for intervals
+        patches = [ ]
+        for tA, tB in zip(ts[0::2], ts[1::2]):
+            p = ax.add_patch(matplotlib.patches.Rectangle(
+                      (convert_t(tA), ylow),
+                      calc_width(tB, tA),
+                      yhigh-ylow,
+                      facecolor=(.81,.81,.81),
+                      edgecolor=(.51,.51,.51),
+                      zorder=-10))
+            patches.append(p)
+        return patches
     def plot_actual(self, ax,
                     convert_t=lambda t: t,
                     style='o', color='red'):
@@ -808,6 +851,29 @@ class Results(object):
             #    print "    %5.2f %d %s"%(tfidf, tfs[e], name)
             return_data.append((tfidf, name) for (tfidf, e), name in zip(mostcommon, names))
         return return_data
+    def entropy(self, evs):
+        all_S = [ ]
+        for tlow, thigh in zip(self.tlows, self.thighs):
+            c = evs._execute("""SELECT count(*) from %s WHERE ?<=t AND t<? GROUP BY e"""%evs.table,
+                             (tlow, thigh))
+            # Could use scipy.stats.entropy, but not depending on
+            # scipy yet.
+            counts = [x for (x,) in c ]
+            total = float(sum(counts))
+            S = -sum(p/total*log(p/total) for p in counts if p>0 ) / log(2)
+            all_S.append(S)
+        return all_S
+    def plot_entropy(self, evs, ax, convert_t=lambda t: t):
+        all_S = self.entropy(evs)
+        points = sum( ([(convert_t(tlow), S), (convert_t(thigh),S) ]
+                        for (tlow, thigh, S)
+                        in zip(self.tlows, self.thighs, all_S)),
+                     []
+                    )
+        xs, ys = zip(*points)
+        ls = ax.plot(xs, ys, '-', c='#E6C416')
+        print 'xxx'*50
+        return ls
 
 
 
@@ -1049,10 +1115,12 @@ def run_dual(argv=sys.argv[1:], return_output=True, evs=None,
         results_w[1]['results'].plot_similarities(ax2,
                                     convert_t=results_w[1]['convert_t'])
 
-    results_uw[1]['results'].plot_intervals(ax1,
+    #results_uw[1]['results'].plot_intervals(ax1,
+    #                                convert_t=results_uw[1]['convert_t'])
+    results_uw[1]['results'].plot_intervals_patches(ax1,
                                     convert_t=results_uw[1]['convert_t'])
     if ax2:
-        results_w[1]['results'].plot_intervals(ax2,
+        results_w[1]['results'].plot_intervals_patches(ax2,
                                     convert_t=results_w[1]['convert_t'])
 
     return results_uw, results_w
