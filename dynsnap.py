@@ -664,7 +664,7 @@ class Results(object):
         densities = numpy.asarray(densities, dtype=float)
         densities = numpy.divide(densities, halfwidth*2)
         #print sum(densities[numpy.isnan(densities)==False])
-        ls = ax.plot(domain, densities, '-')
+        ls = ax.plot(domain, densities, '-', color='#3F1F9E', zorder=0)
         return ls
 
     def plot_similarities(self, ax,
@@ -673,7 +673,7 @@ class Results(object):
         # Plot similarities
         ts = self.tlows[:1] + self.thighs[:-1]
         sims = self.sims
-        ls = ax.plot([convert_t(t) for t in ts], sims, style)
+        ls = ax.plot([convert_t(t) for t in ts], sims, style, color='#006F07')
         return ls
     def plot_intervals(self, ax,
                        convert_t=lambda t: t,
@@ -682,7 +682,7 @@ class Results(object):
         # Plot vertical lines for intervals
         lines = [ ]
         for thigh in ts:
-            ls = ax.axvline(x=convert_t(thigh), color='k', linewidth=.5)
+            ls = ax.axvline(x=convert_t(thigh), color=(.21,.21,.21), linewidth=.5)
             lines.append(ls)
         return lines
     def plot_actual(self, ax,
