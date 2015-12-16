@@ -58,8 +58,8 @@ def demo01(seed=None, n=20, t=10, T=30, p=.5,
            **kwargs):
     rng = get_rng(seed)
     for tt in range(T):
-        phase = (tt // t) % 3 # 0, 1, or 2
-        for e in range(n*2):
+        phase = (tt // t) % len(phase_active)
+        for e in range(n*max(x[1] for x in phase_active)):
             if not (phase_active[phase][0]*n <= e < phase_active[phase][1]*n):
                 continue
             #if phase==1 and e < n: continue
