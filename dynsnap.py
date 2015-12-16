@@ -697,8 +697,10 @@ class Results(object):
             lines.append(ls)
         return lines
     def plot_intervals_patches(self, ax,
-                       convert_t=lambda t: t,
-                       style='g-'):
+                               convert_t=lambda t: t,
+                               shift=0,
+                               ylow=0,
+                               yhigh=1):
         """Plot detected intervals as patches."""
         import matplotlib.patches
         import matplotlib.dates as mdates
@@ -710,22 +712,24 @@ class Results(object):
         else:
             def calc_width(high, low):
                 return high-low
-        ylow, yhigh = ax.get_xlim()
-        ylow = 0
-        yhigh = 1
+        #ylow, yhigh = ax.get_xlim()
         ts = self.thighs
         if len(ts)%2 == 1: # if odd
             ts = [self.tlows[0]] + ts
         # Plot vertical lines for intervals
         patches = [ ]
         for tA, tB in zip(ts[0::2], ts[1::2]):
-            p = ax.add_patch(matplotlib.patches.Rectangle(
-                      (convert_t(tA), ylow),
-                      calc_width(tB, tA),
-                      yhigh-ylow,
-                      facecolor=(.81,.81,.81),
-                      edgecolor=(.51,.51,.51),
-                      zorder=-10))
+            #p = ax.add_patch(matplotlib.patches.Rectangle(
+            #          (convert_t(tA+shift), ylow),
+            #          calc_width(tB, tA),
+            #          yhigh-ylow,
+            #          facecolor=(.81,.81,.81),
+            #          edgecolor=(.51,.51,.51),
+            #          zorder=-10))
+            p = ax.axvspan(convert_t(tA+shift), convert_t(tB+shift),
+                           facecolor=(.81,.81,.81),
+                           edgecolor=(.51,.51,.51),
+                           zorder=-10)
             patches.append(p)
         return patches
     def plot_actual(self, ax,
