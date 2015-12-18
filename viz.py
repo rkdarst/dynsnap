@@ -65,7 +65,7 @@ class Demo00(Viz):
     ylim = (None, 14)
     @staticmethod
     def model():
-        return models.demo01(seed=16, p=.8, n=3,
+        return models.demo01(seed=18, p=.6, n=3,
                              t=4, T=8,
                              phase_active=[(0,2),(1,3)])
 
