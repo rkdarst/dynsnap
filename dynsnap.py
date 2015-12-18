@@ -656,6 +656,7 @@ class Results(object):
     def plot_density(self, ax, evs,
                      convert_t=lambda t: t,
                      style='-',
+                     scale=1,
                      **kwargs):
         """Create local event density and plot it on an axis."""
         # Calculate local event density for the plot
@@ -675,7 +676,7 @@ class Results(object):
         densities = numpy.asarray(densities, dtype=float)
         densities = numpy.divide(densities, halfwidth*2)
         #print sum(densities[numpy.isnan(densities)==False])
-        ls = ax.plot(domain, densities, '-', color='#3F1F9E', zorder=0)
+        ls = ax.plot(domain, densities*scale, '-', color='#3F1F9E', zorder=0)
         return ls
 
     def plot_similarities(self, ax,
