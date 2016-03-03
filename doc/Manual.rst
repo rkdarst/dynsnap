@@ -117,15 +117,18 @@ Arguments:
 User interaction options:
 
 --plot, -p
-    Write some plots at ``OutputName.{pdf,png}``.  Requires matplotlib
-    and ``pcd``.
+    Write some plots at ``OutputName.{pdf,png}``.  Requires matplotlib.
 --plotstyle
-    Format of the plot style.  ``1``, ``2``, or ``3`` for different
+    Format of the plot style.  ``1`` or  ``2`` for different
     plotting formats.  These are designed for quick information, not
-    to be ready for future use.
+    to be ready for use in other publications, etc.  The default is
+    ``2``.  ``1`` plots intervals, interval length, and similarity
+    values.  ``2`` plots intervals, local event density and similarity
+    score.
 --interact
     If given, start an interactive IPython shell at the end of the
-    main function.  This
+    main function.  This could be useful for investigating the results
+    and data some, but would require looking at the code quite a bit.
 --tstart T
     Start analysis only after this time.  Events before this time are
     not segmented, and the first segment starts at this time.
@@ -173,7 +176,8 @@ Options related to the segmentation algorithm:
 --dont-merge-first
     Do not perform the "merge first two intervals" process.  By
     default, the first two intervals are merged.  It is recommended to
-    disable this.
+    use this option except in cases where you expect data to have very
+    clear transitions.
 --dtmode=NAME
     Select among the three types of search patterns: ``linear``,
     ``log``, and ``event``.  The default is ``log`` and this has been
@@ -212,23 +216,32 @@ Options related to the segmentation algorithm:
         and ``shortest``, which go a bit further and make sure
         that there is no future greater maximum.
 
+--dt-search-min=DELTAT
+    When scanning forward in time, always search at least this amount
+    of time before stopping.  This prevents finding similarity maxima
+    at very small time scales.  Normally, if this is needed it is
+    because of maxima caused by fluctuations at short time.  Note that
+    this is already mostly compensated for, one would only need this
+    in special cases.  This option only applies to
+    ``--peakfinder=longest``.
 
 Options for --dtmode=linear
 
 --dtstep
     Set the increment for searching.  Only for the ``linear`` scan
-    mode.  Default 1.
+    mode.  Default is 1.
 --dtmin
     Set the minimum search time.  Only for the ``linear`` scan mode.
-    Default 1.
+    Default is dtstep.
 --dtmax
     Set the maximum search time.  Only for the ``linear`` scan mode.
-    Default 1.
+    Default is 1000*dtstep.
 --dtextra
     After a peak is found, search this much further in time before
     settling on the peak.  By default, an adaptive method is used.
 --log-dtmin
-    Set the increment for searching.  Only for the ``log`` scan mode.  Default 1.
+    Set the increment for searching.  Only for the ``log`` scan mode.
+    Default is an adaptive mode.
 --log-dtmax
     Not used.
 

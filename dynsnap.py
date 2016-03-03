@@ -919,11 +919,11 @@ parser.add_argument("--datacols", default="",
 parser.add_argument("-p", "--plot", action='store_true',
                     help="Plot also?")
 parser.add_argument("--plotstyle", default='2',
-                    help="Plot style, '1', '2', or '3'.")
+                    help="Plot style, '1' or '2'.")
 parser.add_argument("-i", "--interact", action='store_true',
                     help="Interact with results in IPython after calculation")
 
-parser.add_argument("--tformat")
+parser.add_argument("--tformat", help="Parse time in this format.  Options: 'unixtime'")
 parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
 parser.add_argument("--tstop", type=float, help="Time to end analysis.")
 parser.add_argument("--dtmode", default='log',
@@ -942,7 +942,7 @@ group.add_argument("--dtstep", type=float, default=SnapshotFinder.dt_step,
                    help="step size for dt scanning. (default=%(default)s)")
 group.add_argument("--dtmin", type=float, help="(default=DTSTEP)")
 group.add_argument("--dtmax", type=float, help="(default=1000*DTSTEP)")
-group.add_argument("--dtextra", type=float, help="(default=50*DTSTEP)")
+group.add_argument("--dtextra", type=float, help="(default=adaptive")
 
 group = parser.add_argument_group("Logarithmic time options (with --dtmode=log)")
 group.add_argument("--log-dtmin", type=float,)
