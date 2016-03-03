@@ -98,7 +98,9 @@ def test_weightedset():
     assert_equal(len(A | B), 5)
     assert_equal(len(A & C), 1)
     assert_equal(len(A | C), 7)
-
+def approxeq(x, y, d=1e-6):
+    if x+y==0: return x==y
+    return 2*abs(x-y)/(x+y) < d
 
 
 
@@ -474,7 +476,9 @@ class SnapshotFinder(object):
         # case, we restart completly.
         self.t_crit = False
         if ((.95*xs[i_max] <= xs[-1])
-            and self.old_es is not None and self.tstart+dts[-1] < self.tstop-.001):
+            and self.old_es is not None
+            and (self.tstart+dts[-1] < self.tstop-.001
+                 or approxeq(xs[len(xs)//2], xs[-1], .01))):
             print "### critical event detected at t=%s"%self.tstart
             # At this point, we have had an extreme event and we
             # should restart from zero.
