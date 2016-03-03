@@ -8,5 +8,6 @@ together.  In other words, an intrinsic data scale is detected which
 is not related to just the event rate.
 
 * Our paper describing the method is at [REFERENCE].
-* A user manual exists at doc/Manual.rst
+* A user manual exists at `doc/Manual.rst <doc/Manual.rst>`_.
+
 * A detailed algorithmic description exists at doc/Algorithm.tex
