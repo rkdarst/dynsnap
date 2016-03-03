@@ -248,7 +248,7 @@ information.  Column numbers start from 0.
 --grouped
     See documentation for events.py below.
 --datacols
-    Data columns.
+    Data columns.  See ``events.py`` below.
 --cache
     If given, ``dynsnap.py`` operates a bit like ``event.py`` so that
     the initial data is stored in an sqlite database, with a name
@@ -304,7 +304,8 @@ Arguments:
 --datacols
     If given, only these columns are considered for specifying
     events.  All other columns (besides the time and weight columns)
-    are ignored.
+    are ignored.  Format must be as in ``--datacols="0,1,2,5"``.
+    Columns are zero-indexed!
 
 
 models.py
