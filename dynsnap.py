@@ -121,6 +121,7 @@ class SnapshotFinder(object):
     log_dt_max = None
     dt_search_min = 0
     dt_first_override = None
+    peak_factor = 0.05
 
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
@@ -130,6 +131,7 @@ class SnapshotFinder(object):
                  dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
                  log_dt_min=None, log_dt_max=None,
                  dt_search_min=0,
+                 peak_factor=None,
                  ):
         self.evs = evs
         if isinstance(args, argparse.Namespace):
@@ -156,7 +158,8 @@ class SnapshotFinder(object):
 
         locals_ = locals()
         for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra',
-                     'log_dt_min', 'log_dt_max', 'dt_search_min'):
+                     'log_dt_min', 'log_dt_max', 'dt_search_min',
+                     'peak_factor'):
             if locals_[name] is not None:
                 setattr(self, name, locals_[name])
         #self.dt_min     = dt_min
@@ -346,8 +349,13 @@ class SnapshotFinder(object):
         dt_extra_ = self.dt_extra
         if not dt_extra_:
             dt_extra_ = 2*dts[i_max]
-        #print 'dt_extra:', dt_extra_, i_max, dts[i_max], self.dt_extra
+        else:
+            dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max], self.dt_search_min)
 
+        if (xs[-1] < xs[i_max]*self.peak_factor
+                      and len(dts) > 10
+                      and dt>=self.dt_search_min):
+            raise self.StopSearch(i_max)
         if dt > dts[i_max] + dt_extra_:
             raise self.StopSearch(i_max)
         return i_max
@@ -363,6 +371,10 @@ class SnapshotFinder(object):
             #dt_extra_ = min(86400*5, self.tstart + 100*dts[i_max])
             #dt_extra_ = max(86400*600, dt_extra_)
 
+        if (xs[-1] < xs[i_max]*self.peak_factor
+                      and len(dts) > 10
+                      and dt>=self.dt_search_min):
+            raise self.StopSearch(i_max)
         if len(dts) > 10 and dt > dts[i_max] + dt_extra_:
             raise self.StopSearch(i_max)
         return i_max
@@ -943,6 +955,12 @@ group.add_argument("--dtstep", type=float, default=SnapshotFinder.dt_step,
 group.add_argument("--dtmin", type=float, help="(default=DTSTEP)")
 group.add_argument("--dtmax", type=float, help="(default=1000*DTSTEP)")
 group.add_argument("--dtextra", type=float, help="(default=adaptive")
+group.add_argument("--peak-factor", type=float,
+                   default=SnapshotFinder.peak_factor,
+                   help="Immediately stop seaching if similarity drops to "
+                   "this fracion of the peak.  Range: [0,1), should be low. "
+                   "(default=%(default)s)"
+                   )
 
 group = parser.add_argument_group("Logarithmic time options (with --dtmode=log)")
 group.add_argument("--log-dtmin", type=float,)

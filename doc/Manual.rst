@@ -215,6 +215,19 @@ Options related to the segmentation algorithm:
         longest plateau value.  This is in contrast to ``longest``
         and ``shortest``, which go a bit further and make sure
         that there is no future greater maximum.
+--peak-factor=X
+    If given, this will mean that a maximum will be found if the
+    similarity drops to X*similarity_max.  In other words, this makes
+    a trade off between ``greedy`` and ``longest``.  For example, if
+    *x=0.5*, that means that if after a maximum, we drop down to 0.5
+    of that maximal similarity value, we stop searching and use that
+    maximum.  ``greedy`` is in effect ``--peak-factor=.999...`` and
+    ``longest``/``shortest`` is ``-peak-factor=0``.  By default,
+    this is set to 0.05, which should be basically indistinguishable
+    from 0.0 in most cases.  However, in all cases we will scan at
+    least ``--dt-search-min`` time units and 10 steps forward before
+    possibly using the peak factor.  This is to prevent us from
+    finding extremely small *dt*\ s at short times.
 
 --dt-search-min=DELTAT
     When scanning forward in time, always search at least this amount
@@ -223,7 +236,7 @@ Options related to the segmentation algorithm:
     because of maxima caused by fluctuations at short time.  Note that
     this is already mostly compensated for, one would only need this
     in special cases.  This option only applies to
-    ``--peakfinder=longest``.
+    ``--peakfinder=longest`` and ``--peakfinder=shortest``.
 
 Options for --dtmode=linear
 
