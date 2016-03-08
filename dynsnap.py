@@ -3,9 +3,16 @@
 import argparse
 import collections
 import datetime
+import heapq
+from itertools import product
+import math
 from math import floor, log, log10, sqrt
+import numpy
+import os
+import random
 import sqlite3
 import sys
+import time
 
 from events import Events, load_events
 
@@ -701,7 +708,6 @@ class Results(object):
                      **kwargs):
         """Create local event density and plot it on an axis."""
         # Calculate local event density for the plot
-        import math
         tlow = self.tlows[0]
         thigh = self.thighs[-1]
         data_size = thigh-tlow
@@ -802,12 +808,11 @@ class Results(object):
         #ax2.set_xlim(self.tlows[0], self.thighs[-1])
 
         # Calculate local event density for the plot
-        import math
         tlow = self.tlows[0]
         thigh = self.thighs[-1]
         data_size = thigh-tlow
         interval = data_size/1000.
-        halfwidth = data_size/100
+        halfwidth = data_size/100.
         tlow = math.floor(tlow/interval)*interval
         thigh = math.ceil(thigh/interval)*interval
         domain = numpy.arange(tlow, thigh, interval)
@@ -875,7 +880,6 @@ class Results(object):
             dfs[e] = -log10(dfs[e]/float(len(self.tlows)))
         dfs = dict(dfs)
         # For each interval, compute TFIDF
-        import heapq
         return_data = [ ]
         for tlow, thigh in zip(self.tlows, self.thighs):
             total_terms = evs._execute("""SELECT sum(w) from %s WHERE ?<=t AND t<? """%evs.table,
@@ -1004,14 +1008,6 @@ group.add_argument("--log-dtmax", type=float,)
 
 def main(argv=sys.argv[1:], return_output=True, evs=None,
          convert_t=None, outsuffix=None):
-    from itertools import product
-    import math
-    import numpy
-    import os
-    import random
-    import time
-
-    import networkx
 
 
     args = parser.parse_args(args=argv)
