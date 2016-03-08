@@ -82,6 +82,16 @@ input.out.{pdf, png}:
     Plots of the segmentation.
 
 
+Quickstart
+----------
+1. Be able to run the code on your input file.  Relevant option would
+   be ``-w`` for the weights (if any), ``-t`` for the column with
+   times.  See options for ``events.py``, they also apply too
+   ``dynsnap.py``.
+2. If needed, look at options related to time scales.
+3. Save output by giving a output prefix as a second positional
+   argument on the command line.
+
 
 
 Command line usage
@@ -198,44 +208,85 @@ Options related to the segmentation algorithm:
         990, 1000, 1100, ....  This is scaled by a power of 10 to
 	match the size of the first next event.
 
+
+Options related to timescales:
+
+These options are particularly important.  The method works by finding
+similarity peaks as a function of *dt*.  How do we find a maximum,
+global or local?  By default, the algorithm tries hard to find global
+maxima.  This mean that it tries hard to search forward in time very
+far (but also efficiently).  On the other hand, once we find a local
+maximum, we could stop and use that.  Using these options, you can
+balance these factors.
+
+Let's say that your data has long-term similarity.  To check this, ask
+what is the expected similarity between the first 1/3rd and last 1/3rd
+of all data.  If this is high (say, let's say it is 1), that means
+that according to our method, the longest self-similar time scale *is*
+all time.  An example of this type of data is something with a
+uniformly repeating pattern.  There is local similarity, differences
+on medium scales, and then similarity on the longest scale.  The
+method is expected to detect the longest scale similarity.
+
+In the below options, the "peak" means the similarity maximum value,
+as detected by the corresponding ``--peakfinder``.  We always start
+searching at a small *dt*, and increase.  At each time point,
+``--peakfinder`` proposes some *dt_peak*, and then the other options
+control the stop condition.  These options are considered in this
+order: ``--dt-search-min`` first, then ``--dt-pastpeak-factor`` /
+``--self.dt_peak_factor`` / ``--dt-pastpeak-max``.
+
+
 --peakfinder=NAME
     Method of finding peaks of similarity, if there is a plateau of
     the same value.  Options are ``longest``, ``shortest``,
-    ``greedy``.  The default is ``longest``.
+    ``greedy``.
 
     longest:
-        longest-time plateau value.
+        longest-time maximum similarity value.  (default)
     shortest:
-        shortest-time plateau value.
-
+        shortest-time maximum similarity value.
     greedy:
         A greedy search for longest plateau value.  As soon as the
         first decrease is detected, abort the search and use the
         longest plateau value.  This is in contrast to ``longest``
         and ``shortest``, which go a bit further and make sure
         that there is no future greater maximum.
---peak-factor=X
-    If given, this will mean that a maximum will be found if the
-    similarity drops to X*similarity_max.  In other words, this makes
-    a trade off between ``greedy`` and ``longest``.  For example, if
+--dt-peak-factor=FACTOR
+    If given, this will mean that we stop searching if the similarity
+    drops to *FACTOR*similarity_max*.  In other words, this makes a
+    trade off between ``greedy`` and ``longest``.  For example, if
     *x=0.5*, that means that if after a maximum, we drop down to 0.5
     of that maximal similarity value, we stop searching and use that
     maximum.  ``greedy`` is in effect ``--peak-factor=.999...`` and
-    ``longest``/``shortest`` is ``-peak-factor=0``.  By default,
-    this is set to 0.05, which should be basically indistinguishable
-    from 0.0 in most cases.  However, in all cases we will scan at
-    least ``--dt-search-min`` time units and 10 steps forward before
+    ``longest``/``shortest`` is ``-peak-factor=0``.  By default, this
+    is set to -1, which should never be triggered, so this condition
+    is never triggered.  However, in all cases we will scan at least
+    ``--dt-search-min`` time units and 10 steps forward before
     possibly using the peak factor.  This is to prevent us from
-    finding extremely small *dt*\ s at short times.
-
---dt-search-min=DELTAT
+    finding extremely small *dt*\ s at short times.  (default: -1)
+--dt-pastpeak-factor=FACTOR
+    Scan forward in time to at least *FACTOR*dt_peak*.  Default=25.
+--dt-pastpeak-max=DT
+    Scan forward in time past the maximum at least this far.
+    (default: None)
+--dt-pastpeak-min=DT
+    Never scan more than this far past a peak.  In other words, there
+    is a mandatory stop condition at *dt_peak=DT_PEAKFACTOR_MAX*.  The
+    difference with ``--dt-search-min`` is that this option measures
+    past the peak, and ``--peak-factor`` overrides it, but
+    ``--dt-search-min`` measures from *dt=0* and must be met before
+    ``--peak-factor`` can stop the search.  In most cases, you can
+    just use this option only.  (default: 0)
+--dt-search-min=DT
     When scanning forward in time, always search at least this amount
-    of time before stopping.  This prevents finding similarity maxima
-    at very small time scales.  Normally, if this is needed it is
-    because of maxima caused by fluctuations at short time.  Note that
-    this is already mostly compensated for, one would only need this
-    in special cases.  This option only applies to
-    ``--peakfinder=longest`` and ``--peakfinder=shortest``.
+    of time before stopping, even if other stop condition are met.
+    This prevents finding similarity maxima caused by noise at very
+    small time scales.  Note that this is already mostly compensated
+    for by ``--dt-peak-factor``, one would only need this in special
+    cases.  This option only applies to ``--peakfinder=longest`` and
+    ``--peakfinder=shortest`` (default: 0).
+
 
 Options for --dtmode=linear
 
@@ -248,9 +299,9 @@ Options for --dtmode=linear
 --dtmax
     Set the maximum search time.  Only for the ``linear`` scan mode.
     Default is 1000*dtstep.
---dtextra
-    After a peak is found, search this much further in time before
-    settling on the peak.  By default, an adaptive method is used.
+
+Options for --dtmode=log
+
 --log-dtmin
     Set the increment for searching.  Only for the ``log`` scan mode.
     Default is an adaptive mode.

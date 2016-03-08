@@ -116,13 +116,16 @@ class SnapshotFinder(object):
     dt_min = None
     dt_max = None
     dt_step = 1
-    dt_extra = None
     log_dt_min = None
     log_dt_max = None
-    dt_search_min = 0
     dt_first_override = None
-    peak_factor = 0.05
     merge_first = False
+
+    dt_pastpeak_factor = 25
+    dt_peak_factor = 0.0
+    dt_pastpeak_min = 0
+    dt_pastpeak_max = None
+    dt_search_min = 0
 
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
@@ -130,10 +133,11 @@ class SnapshotFinder(object):
                  dtmode='log', peakfinder='longest',
                  merge_first=None,
                  args={},
-                 dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
+                 dt_min=None, dt_max=None, dt_step=None,
                  log_dt_min=None, log_dt_max=None,
+                 dt_pastpeak_factor=None, dt_peak_factor=None,
+                 dt_pastpeak_min=None, dt_pastpeak_max=None,
                  dt_search_min=0,
-                 peak_factor=None,
                  ):
         self.evs = evs
         if isinstance(args, argparse.Namespace):
@@ -159,19 +163,19 @@ class SnapshotFinder(object):
         else:                        raise ValueError("Unknown peakfinder: %s"%peakfinder)
 
         locals_ = locals()
-        for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra',
-                     'log_dt_min', 'log_dt_max', 'dt_search_min',
-                     'peak_factor', 'merge_first'):
+        for name in ('dt_min', 'dt_max', 'dt_step',
+                     'log_dt_min', 'log_dt_max',
+                     'merge_first',
+                     'dt_pastpeak_factor',
+                     'dt_peak_factor',
+                     'dt_pastpeak_min',
+                     'dt_pastpeak_max',
+                     'dt_search_min',
+                     ):
             if locals_[name] is not None:
                 setattr(self, name, locals_[name])
-        #self.dt_min     = dt_min
-        #self.dt_max     = dt_max
-        #self.dt_step    = dt_step
-        #self.dt_extra   = dt_extra
-        #self.log_dt_max = log_dt_max
         if self.dt_min   is None:    self.dt_min   = self.dt_step
         if self.dt_max   is None:    self.dt_max   = 1000*self.dt_step
-        #if self.dt_extra is None:    self.dt_extra = 50*self.dt_step
 
 
     # Two generalized set-making functions.  These take an iterator
@@ -347,50 +351,69 @@ class SnapshotFinder(object):
 
     def pick_best_dt_shortest(self, dt, dts, xs):
         i_max = numpy.argmax(xs)
+        dt_peak = dts[i_max]
 
-        dt_extra_ = self.dt_extra
-        if not dt_extra_:
-            dt_extra_ = 2*dts[i_max]
-        else:
-            dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max], self.dt_search_min)
+        dt_extra_ = max(self.dt_pastpeak_factor*dt_peak,
+                        self.dt_pastpeak_factor*self.last_dt_max,
+                        self.dt_pastpeak_min)
 
-        if (xs[-1] < xs[i_max]*self.peak_factor
+        # If we have found a peak, and the value has now decreased to
+        # J_peak*dt_peak_factor, stop the search.
+        if (xs[-1] < xs[i_max]*self.dt_peak_factor
                       and len(dts) > 10
                       and dt>=self.dt_search_min):
             raise self.StopSearch(i_max)
-        if dt > dts[i_max] + dt_extra_:
+        # If we have searched to (dt_peak + dt_extra_), then stop
+        # search.  dt_extra_ is a dynamic quantity that encapsulates
+        # "a certain factor past the current peak."
+        if (len(dts) > 10
+                    and dt > dt_peak + dt_extra_
+                    and dt>=self.dt_search_min):
+            raise self.StopSearch(i_max)
+        # If we have gone beyond self.dt_pastpeak_max past the max,
+        # then unconditionally stop the search.
+        if self.dt_pastpeak_max and dt > dt_peak + self.dt_pastpeak_max:
             raise self.StopSearch(i_max)
         return i_max
     def pick_best_dt_longest(self, dt, dts, xs):
         xs_array_reversedview = numpy.asarray(xs)[::-1]
         i_max_reversed = numpy.argmax(xs_array_reversedview)
         i_max = len(xs) - 1 - i_max_reversed
+        dt_peak = dts[i_max]
 
-        if self.dt_extra:
-            dt_extra_ = self.dt_extra
-        else:
-            dt_extra_ = max(25*self.last_dt_max, 25*dts[i_max], self.dt_search_min)
-            #dt_extra_ = min(86400*5, self.tstart + 100*dts[i_max])
-            #dt_extra_ = max(86400*600, dt_extra_)
+        dt_extra_ = max(self.dt_pastpeak_factor*dt_peak,
+                        self.dt_pastpeak_factor*self.last_dt_max,
+                        self.dt_pastpeak_min)
 
-        if (xs[-1] < xs[i_max]*self.peak_factor
+        # If we have found a peak, and the value has now decreased to
+        # J_peak*dt_peak_factor, stop the search.
+        if (xs[-1] < xs[i_max]*self.dt_peak_factor
                       and len(dts) > 10
                       and dt>=self.dt_search_min):
             raise self.StopSearch(i_max)
-        if len(dts) > 10 and dt > dts[i_max] + dt_extra_:
+        # If we have searched to (dt_peak + dt_extra_), then stop
+        # search.  dt_extra_ is a dynamic quantity that encapsulates
+        # "a certain factor past the current peak."
+        if (len(dts) > 10
+                    and dt > dt_peak + dt_extra_
+                    and dt>=self.dt_search_min):
+            raise self.StopSearch(i_max)
+        # If we have gone beyond self.dt_pastpeak_max past the max,
+        # then unconditionally stop the search.
+        if self.dt_pastpeak_max and dt > dt_peak + self.dt_pastpeak_max:
             raise self.StopSearch(i_max)
         return i_max
     def pick_best_dt_greedy(self, dt, dts, xs):
-        if len(xs) > 2 and xs[-2] > xs[-1]:  # if we have decreased on the last step
+        # if we have decreased on the last step AND if we have
+        # exceeded dt_search_min.
+        if len(xs) > 2 and xs[-2] > xs[-1] and dt>self.dt_search_min:
             raise self.StopSearch(len(xs)-2)
-        # break condition when exceeding scan time
-        dt_extra_ = self.dt_extra
+        # break condition when exceeding total available time.
         if self.tstart + dt > self.tstop:
             raise self.StopSearch(len(xs)-1)
 
-
         return len(xs) - 1
-    pick_best_dt = pick_best_dt_shortest
+    pick_best_dt = pick_best_dt_longest
 
     # This is the core function that does a search.
     def find(self):
@@ -943,26 +966,36 @@ parser.add_argument("--tstop", type=float, help="Time to end analysis.")
 parser.add_argument("--dtmode", default='log',
                     help="dt search pattern (linear, log, event) "
                          "(default: %(default)s)")
-parser.add_argument("--peakfinder", default='longest',
+
+group = parser.add_argument_group("Time scale related options")
+group.add_argument("--peakfinder", default='longest',
                     help="How to select peak of Jaccard similarity. "
                          "(shortest, longest, greedy) "
                          "(default=%(default)s)")
-parser.add_argument("--dt-search-min", default=SnapshotFinder.dt_search_min,
+group.add_argument("--dt-pastpeak-factor", type=float, metavar='FACTOR',
+                   help="Factor by which to search past the maximum for a better maximum "
+                   "(not greedy peakfinder) (default %(default)s)")
+group.add_argument("--dt-peak-factor", type=float, metavar='FACTOR',
+                   default=SnapshotFinder.dt_peak_factor,
+                   help="Immediately stop seaching if similarity drops to "
+                   "this fracion of the peak.  Range: [0,1). "
+                   "(default=%(default)s)"
+                   )
+group.add_argument("--dt-search-min", default=SnapshotFinder.dt_search_min, metavar='DT',
                    type=float, help="Minimum amount to seach on each "
-                                    "step (longest only).")
+                                    "step (default %(default)s.")
+group.add_argument("--dt-pastpeak-min", type=float, metavar='DT',
+                   default=SnapshotFinder.dt_pastpeak_min,
+                   help="Minimum amount to search past each peak (not greedy) (default %(default)s)")
+group.add_argument("--dt-pastpeak-max", type=float, metavar='DT',
+                   default=SnapshotFinder.dt_pastpeak_max,
+                   help="Maximum amount to search past each peak (not greedy) (default %(default)s)")
 
 group = parser.add_argument_group("Linear time options (must specify --dtmode=linear)")
 group.add_argument("--dtstep", type=float, default=SnapshotFinder.dt_step,
                    help="step size for dt scanning. (default=%(default)s)")
 group.add_argument("--dtmin", type=float, help="(default=DTSTEP)")
 group.add_argument("--dtmax", type=float, help="(default=1000*DTSTEP)")
-group.add_argument("--dtextra", type=float, help="(default=adaptive")
-group.add_argument("--peak-factor", type=float,
-                   default=SnapshotFinder.peak_factor,
-                   help="Immediately stop seaching if similarity drops to "
-                   "this fracion of the peak.  Range: [0,1), should be low. "
-                   "(default=%(default)s)"
-                   )
 
 group = parser.add_argument_group("Logarithmic time options (with --dtmode=log)")
 group.add_argument("--log-dtmin", type=float,)
@@ -1003,10 +1036,15 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
                             measure=args.measure,
                             merge_first=args.merge_first,
 
+                            dt_pastpeak_factor = args.dt_pastpeak_factor,
+                            dt_peak_factor = args.dt_peak_factor,
+                            dt_pastpeak_min = args.dt_pastpeak_min,
+                            dt_pastpeak_max = args.dt_pastpeak_max,
+                            dt_search_min = args.dt_search_min,
+
                             # linear options
                             dt_min   = args.dtmin,
                             dt_max   = args.dtmax,
-                            dt_extra = args.dtextra,
                             dt_step  = args.dtstep,
 
                             # logarithmic search
