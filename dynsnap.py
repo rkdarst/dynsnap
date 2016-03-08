@@ -496,13 +496,20 @@ class SnapshotFinder(object):
                                  measure_data=[])
         i_max = None
         try:
+          break_next_round = False
           for i, dt in enumerate(self.iter_all_dts()):
             # Condition for breaking.  This assumes that the dt values
             # are monitonically increasing.  If not, the iter_all_dts
             # method needs to ensure that this condition is never
             # fulfilled until after it is ready to stop.
-            if self.tstart + dt > self.tstop:
+            # We need to break _after_ the loop, because we must test
+            # one value greater than the stopping point at least
+            # because the upper interval is open.
+            if break_next_round:
                 break
+            if self.tstart + dt > self.tstop:
+                break_next_round = True
+                continue
             # Get our new event sets for old and new intervals.
             es1s, es2s = self.get(dt)
             # Skip if there are no events in either interval (we don't
