@@ -173,11 +173,10 @@ Options related to the segmentation algorithm:
         ``--measure=cosine -w -1`` (or a column number for the weight option)
     Cosine similarity, unweighted
         ``--measure=cosine_uw``.
---dont-merge-first
-    Do not perform the "merge first two intervals" process.  By
-    default, the first two intervals are merged.  It is recommended to
-    use this option except in cases where you expect data to have very
-    clear transitions.
+--merge-first
+    Perform the "merge first two intervals" process.  This might be
+    useful in cases where your data always has sharp transitions or
+    critical events.
 --dtmode=NAME
     Select among the three types of search patterns: ``linear``,
     ``log``, and ``event``.  The default is ``log`` and this has been

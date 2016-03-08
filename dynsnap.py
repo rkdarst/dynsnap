@@ -122,11 +122,13 @@ class SnapshotFinder(object):
     dt_search_min = 0
     dt_first_override = None
     peak_factor = 0.05
+    merge_first = False
 
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
                  measure='jacc',
                  dtmode='log', peakfinder='longest',
+                 merge_first=None,
                  args={},
                  dt_min=None, dt_max=None, dt_step=None, dt_extra=None,
                  log_dt_min=None, log_dt_max=None,
@@ -159,7 +161,7 @@ class SnapshotFinder(object):
         locals_ = locals()
         for name in ('dt_min', 'dt_max', 'dt_step', 'dt_extra',
                      'log_dt_min', 'log_dt_max', 'dt_search_min',
-                     'peak_factor'):
+                     'peak_factor', 'merge_first'):
             if locals_[name] is not None:
                 setattr(self, name, locals_[name])
         #self.dt_min     = dt_min
@@ -530,7 +532,7 @@ class SnapshotFinder(object):
 
         if self.old_es is None:
             # first round, comparing two expanding intervals.
-            if self.args.get('merge_first', True):
+            if self.merge_first:
                 # Merge the first two intervals into a big one.
                 self.old_es = es1s.union(es2s)
                 self.tstart += dt_max  # double interval
@@ -916,8 +918,8 @@ parser.add_argument("--grouped", action='store_true',
                     "events.")
 parser.add_argument("--stats", action='store_true',
                     help="Don't do segmentation, just print stats on the data.")
-parser.add_argument("--dont-merge-first", action='store_false',
-                    default=True, dest="merge_first",
+parser.add_argument("--merge-first", action='store_true',
+                    default=False, dest="merge_first",
                     help="Each line contains different space-separated "
                     "events.")
 
@@ -999,6 +1001,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
                             dtmode=args.dtmode,
                             peakfinder=args.peakfinder,
                             measure=args.measure,
+                            merge_first=args.merge_first,
 
                             # linear options
                             dt_min   = args.dtmin,
