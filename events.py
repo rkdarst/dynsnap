@@ -17,6 +17,7 @@ import sqlite3
 import sys
 
 class ToInts(object):
+    """Convert hashable objects to sequential ints."""
     def __init__(self):
         self._dat = { }
     def __call__(self, x):
@@ -54,6 +55,7 @@ class Events(object):
         self.conn.commit()
         c.close()
     def stats(self, convert_t=lambda x: x, tstart=None, tstop=None):
+        """Print some event stats"""
         if tstart:
             where = 'where %s <= t AND t < %s'%(tstart, tstop)
         else:
@@ -82,23 +84,27 @@ class Events(object):
         c.execute(stmt, *args)
         return c
     def add_event(self, t, e, w=1.0):
+        """Add one event e at time t with weight w."""
         c = self.conn.cursor()
         c.execute("INSERT INTO %s VALUES (?, ?, ?)"%self.table, (t, e, w))
         self.conn.commit()
     def add_events(self, it):
+        """Add events from (t,e,w) iterator."""
         c = self.conn.cursor()
         c.executemany("INSERT INTO %s VALUES (?, ?, ?)"%self.table, it)
         self.conn.commit()
     def t_min(self):
+        """min(t) across all data"""
         c = self.conn.cursor()
         c.execute("SELECT min(t) from %s"%self.table)
         return c.fetchone()[0]
     def t_max(self):
+        """max(t) across all data"""
         c = self.conn.cursor()
         c.execute("SELECT max(t) from %s"%self.table)
         return c.fetchone()[0]
     def times_next(self, tmin, range=None):
-        """Return distinct times after t."""
+        """Return iterator of distinct event times t>tmin."""
         c = self.conn.cursor()
         if range:
             c.execute("SELECT distinct t from %s where ?<t<=? "
@@ -109,35 +115,51 @@ class Events(object):
         for row in c:
             yield row[0]
     def dump(self):
+        """Dump all data.  Prints (t,e,w) rows."""
         c = self.conn.cursor()
         c.execute("SELECT t,e,w from %s"%self.table)
         for row in c:
             print row[0], row[1], row[2]
 
     def __len__(self):
+        """Total number of data points"""
         c = self.conn.cursor()
         c.execute("SELECT count(*) from %s"%self.table)
         return c.fetchone()[0]
     def n_distinct_events(self):
+        """Number of distinct event IDs in data"""
         c = self.conn.cursor()
         c.execute("SELECT count( DISTINCT e ) from %s"%self.table)
         return c.fetchone()[0]
     def count_interval(self, low, high):
+        """Number of points low<=t</high"""
         c = self.conn.cursor()
         c.execute("SELECT count(*) FROM %s WHERE ?<=t AND t <?"%self.table, (low, high))
         return c.fetchone()[0]
     def iter_distinct_events(self):
+        """Iterate over all distinct integer events IDs e"""
         c = self.conn.cursor()
         c.execute("SELECT DISTINCT e from %s"%self.table)
         for (e,) in c:
             yield e
     def iter_ordered_of_event(self, e):
+        """Iterate over all (t,w) instances of event e."""
         c = self.conn.cursor()
         c.execute("SELECT DISTINCT t, w from %s where e=?"%self.table, (e, ))
         return c
 
 
     def __getitem__(self, interval):
+        """Return a slice: iterator of (t,e,w) in interval.
+
+        Usage:
+            it events[tlow:thigh]
+
+            _tmp = events[tlow:]
+            it = _tmp[:thigh]
+
+        Returns iterator of (t,e,w) in events.
+        """
         assert isinstance(interval, slice)
         assert interval.step is None
         assert interval.start is not None, "Must specify interval start"
@@ -200,6 +222,7 @@ class Events(object):
         c.executemany('UPDATE event SET e=? WHERE rowid=?', zip(es, rowids))
 
 class _EventListSubset(object):
+    """This is used for partial evaluation of Events.__getitem__"""
     def __init__(self, events, t_start):
         self.events = events
         self.t_start = t_start

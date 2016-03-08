@@ -16,14 +16,17 @@ import time
 
 from events import Events, load_events
 
+# This is used to hold output, but it is not really used anymore.
 ResultsRow = collections.namedtuple('ResultsRow',
                                     ('tlow', 'thigh', 'dt', 'x_max', 'measure_data',
                                      'finder_data'))
 
+# The following implement weighed sets.
 class _LenProxy(object):
     def __init__(self, l):   self.l = l
     def __len__(self): return self.l
 class WeightedSet(object):
+    """Weighted set implementation, emulating set()"""
     def __init__(self, it):
         data = self._data = { }
         for x, w in it:
@@ -31,15 +34,18 @@ class WeightedSet(object):
             else:                data[x] += w
     @classmethod
     def _from_data(cls, data):
+        """Directly create a WeightedSet from a data dict"""
         self = cls([])
         self._data = data
         return self
     def update(self, it):
+        """Like set.update() but add weights"""
         data = self._data
         for x, w in it:
             if x not in data:    data[x] = w
             else:                data[x] += w
     def __len__(self):
+        """Number of elements in set"""
         return len(self._data)
     def __and__(self, other):
         """Set intersection"""
@@ -65,6 +71,7 @@ class WeightedSet(object):
             union += max(0,   A[x] - B.get(x, 0))
         return _LenProxy(union)
     def union(self, other):
+        """Set union, return new set"""
         if len(self) <= len(other):
             A, B = self._data, other._data
         else:
@@ -97,6 +104,7 @@ class WeightedSet(object):
 
 
 def test_weightedset():
+    """Small test function to test weighted sets"""
     from nose.tools import assert_equal
     A = WeightedSet([('a',1), ('b',2),])
     B = WeightedSet([('b',1), ('c',2),])
@@ -106,18 +114,24 @@ def test_weightedset():
     assert_equal(len(A & C), 1)
     assert_equal(len(A | C), 7)
 def approxeq(x, y, d=1e-6):
+    """Approximately equal to function, to a tolerance d"""
     if x+y==0: return x==y
     return 2*abs(x-y)/(x+y) < d
 
 
 
-
-#import networkx as nx
-#import pcd.cmtycmp
-#import pcd.support.algorithms as algs
-import numpy
-
 class SnapshotFinder(object):
+    """This is the core snapshot finder class.  Basic usage:
+
+    evs = events.Events()  # or load events
+    finder = SnapshotFinder(evs, ...)
+    while True:
+        out = finder.find()
+        if out is None: break
+
+    In most cases, you can use the main() function which handles much
+    more of the set up and data collection.
+    """
     old_es = None   # None on first round
     old_incremental_es = None
     dt_min = None
@@ -206,7 +220,9 @@ class SnapshotFinder(object):
     # `self.tstart` and the argument dt to return edge sets (made
     # using _make_set).
     def get_first(self, dt):
-        """Get a first interval: two intervals"""
+        """Get a first interval: return the two intervals.
+
+        This uses self.tstart to make to intervals using dt."""
         #cursor = self.evs[self.tstart: self.tstart+dt]
         #es1b = self._set_make(cursor)
         # cached version
@@ -348,15 +364,20 @@ class SnapshotFinder(object):
         for row in c:
             yield row[0] - tstart
             if row[0] - tstart > stop: break
-
-
     iter_all_dts = iter_all_dts_linear
+
+    # Below, we have the --peakfinder related options.  These relate
+    # to picking the maximum value out of the plateau, and
+    # implementing stop conditions.
     class StopSearch(BaseException):
+        """Relay a stop condition from the code to several layers up.
+        """
         def __init__(self, i_max, *args, **kwargs):
             self.i_max = i_max
             return super(self.__class__, self).__init__(*args, **kwargs)
 
     def pick_best_dt_shortest(self, dt, dts, xs):
+        """--peakfinder=shortest"""
         i_max = numpy.argmax(xs)
         dt_peak = dts[i_max]
 
@@ -383,6 +404,7 @@ class SnapshotFinder(object):
             raise self.StopSearch(i_max)
         return i_max
     def pick_best_dt_longest(self, dt, dts, xs):
+        """--peakfinder=longest"""
         xs_array_reversedview = numpy.asarray(xs)[::-1]
         i_max_reversed = numpy.argmax(xs_array_reversedview)
         i_max = len(xs) - 1 - i_max_reversed
@@ -411,6 +433,7 @@ class SnapshotFinder(object):
             raise self.StopSearch(i_max)
         return i_max
     def pick_best_dt_greedy(self, dt, dts, xs):
+        """--peakfinder=greedy"""
         # if we have decreased on the last step AND if we have
         # exceeded dt_search_min.
         if len(xs) > 2 and xs[-2] > xs[-1] and dt>self.dt_search_min:
@@ -443,10 +466,6 @@ class SnapshotFinder(object):
         pick_best_dt(): picks the optimal dt value.
         - Options are pick_best_dt_shortest, pick_best_dt_longest,
           pick_best_dt_greedy.  The following options are defined:
-        - dt_extra: go at least this much father past peak (all)
-          - (shortest): default to 2*peak_dt
-          - (longest): default to 25*last_dt, 25*
-        - dt_search_min: minimum dt_extra (longest)
         """
         # Our stop condition.  Returning None is a sentinel to the
         # caller stop the analysis.
@@ -597,6 +616,9 @@ class SnapshotFinder(object):
         code so far:
           dynsnap.SnapshotFinder.find = dynsnap.SnapshotFinder.find_uniform
           dynsnap.SnapshotFinder.dt_uniform = dt_uniform
+
+        The only purpose is this method is to override *all* detection
+        and return something for testing.
         """
         # Uniform initialization
         self.t_crit = False
@@ -624,6 +646,7 @@ class SnapshotFinder(object):
         return self.interval_low, self.interval_high
 
 class Results(object):
+    """This holds results and provides various analysis methods."""
     def __init__(self, finder, args=None):
         self.finder = finder
         self.args = args
@@ -650,7 +673,9 @@ class Results(object):
         if finder.t_crit:
             self.t_crit.append(finder.interval_low)
     def plot_1(self, path, callback=None, **kwargs):
-        """Do plotting.  Save to path.[pdf,png]"""
+        """Plot of snapshot lengths and similarity.
+
+        Save to path.[pdf,png]."""
         # If we have no data, don't do anything:
         if len(self.tlows) == 0:
             return
@@ -788,6 +813,9 @@ class Results(object):
             ax.plot([convert_t(e)], 1, 'o', color='red')
 
     def plot_2(self, path, callback=None, evs=None, convert_t=lambda t: t, **kwargs):
+        """Plot of similarity scores and local event density.
+
+        Save to path.[pdf,png]."""
         if len(self.tlows) == 0:
             return
         try:
@@ -902,6 +930,7 @@ class Results(object):
             return_data.append((tfidf, name) for (tfidf, e), name in zip(mostcommon, names))
         return return_data
     def entropy(self, evs):
+        """Calculate entropies in detected intervals.  Return entropies."""
         all_S = [ ]
         for tlow, thigh in zip(self.tlows, self.thighs):
             c = evs._execute("""SELECT count(*) from %s WHERE ?<=t AND t<? GROUP BY e"""%evs.table,
@@ -1008,7 +1037,20 @@ group.add_argument("--log-dtmax", type=float,)
 
 def main(argv=sys.argv[1:], return_output=True, evs=None,
          convert_t=None, outsuffix=None):
+    """Frontend to all detection.
 
+    Despite being named main() and being used in the command line, this
+    can be used to encapsulate all detection in your code.  Simply
+    create the command line arguments that you want (argv), pass in an
+    Events object (if your arguments do not read it in) (evs), and you
+    get a Result object out (and any other output files, as specified by
+    the command line options).
+
+    Unfortunately this is kind of confusing, but looking it (search for
+    all uses of the variable "finder" you can see the steps needed to
+    run SnapshotFinder.  Perhaps sometime these would be added to
+    SnapshotFinder itself.
+    """
 
     args = parser.parse_args(args=argv)
     #print args
@@ -1163,6 +1205,9 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
 def run_dual(argv=sys.argv[1:], return_output=True, evs=None,
              ax1=None, ax2=None,
              convert_t=None):
+    """This was a shortcut method to run for both weighted and
+    unweighted analyzes, and save to two matplotlib axes."""
+
     results_uw = main(argv=argv,                return_output=True, evs=evs, convert_t=convert_t, outsuffix='_uw')
     results_w = None
     if ax2:
