@@ -1,3 +1,5 @@
+from __future__ import print_function, division
+
 import fnmatch
 from functools import partial
 import os
@@ -61,7 +63,7 @@ class BaseTest(object):
             if plot:
                 results.add(finder)
 
-            print t1, t2
+            print(t1, t2)
 
             #break
 
@@ -71,7 +73,7 @@ class BaseTest(object):
                 title = self.__class__.__name__
                 if self.ma:
                     title = "%s (%s)"%(title, " ".join("%s=%s"%(k,v)
-                                for k,v in sorted(self.ma.iteritems())))
+                                for k,v in sorted(self.ma.items())))
                 if self.desc:
                     title += '\n'+self.desc
                 lcls['fig'].suptitle(title)
@@ -88,7 +90,7 @@ class BaseTest(object):
                     # First round treated differently from future rounds
                     if i == 0:
                         # First round
-                        print 'first round'
+                        print('first round')
                         tlow = lcls['self'].tlows[i]
                         dt_prev = 'first'
                     else:
@@ -192,5 +194,5 @@ if __name__ == '__main__':
             os.makedirs(dirname)
 
         obj = test()
-        print name, obj.m.func_name
+        print(name, obj.m.func_name)
         obj.run(output=output, **kwargs)

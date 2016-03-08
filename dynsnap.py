@@ -1,5 +1,7 @@
 # Richard Darst, November 2014
 
+from __future__ import print_function, division
+
 import argparse
 import collections
 import datetime
@@ -13,6 +15,12 @@ import random
 import sqlite3
 import sys
 import time
+
+# Python 2/3 compatibility.  Avoid dependency on six for one function.
+if sys.version_info.major < 3:
+    def iteritems(x): return x.iteritems()
+else:
+    def iteritems(x): return iter(x.items())
 
 from events import Events, load_events
 
@@ -55,7 +63,7 @@ class WeightedSet(object):
             A, B = other._data, self._data
         # A is the smaller set
         intersection = 0.0
-        for x, w in A.iteritems():
+        for x, w in iteritems(A):
             if x in B:
                 intersection += min(A[x], B[x])
         return _LenProxy(intersection)
@@ -67,7 +75,7 @@ class WeightedSet(object):
             A, B = other._data, self._data
         # A is the smaller set
         union = sum(B.itervalues())
-        for x, w in A.iteritems():
+        for x, w in iteritems(A):
             union += max(0,   A[x] - B.get(x, 0))
         return _LenProxy(union)
     def union(self, other):
@@ -78,7 +86,7 @@ class WeightedSet(object):
             A, B = other._data, self._data
         data = dict(B)
         # A is the smaller set
-        for x, w in A.iteritems():
+        for x, w in iteritems(A):
             if x not in data:    data[x] = w
             else:                data[x] += w
         return self._from_data(data)
@@ -89,7 +97,7 @@ class WeightedSet(object):
         else:
             A, B = other._data, self._data
         # A is the smaller set
-        return sum(w*B.get(x, 0.0) for x, w in A.iteritems())
+        return sum(w*B.get(x, 0.0) for x, w in iteritems(A))
     def dot_uw(self, other):
         """Dot product of two sets (as vectors), unweighted"""
         if len(self._data) <= len(other._data):
@@ -97,7 +105,7 @@ class WeightedSet(object):
         else:
             A, B = other._data, self._data
         # A is the smaller set
-        return sum(1 for x, w in A.iteritems() if x in B)
+        return sum(1 for x, w in iteritems(A) if x in B)
     def norm(self):
         """Norm of this set (as vector)"""
         return sqrt(sum(w*w for w in self._data.itervalues()))
@@ -549,7 +557,7 @@ class SnapshotFinder(object):
             and self.old_es is not None
             and (self.tstart+dts[-1] < self.tstop-.001
                  or approxeq(xs[len(xs)//2], xs[-1], .01))):
-            print "### critical event detected at t=%s"%self.tstart
+            print("### critical event detected at t=%s"%self.tstart)
             # At this point, we have had an extreme event and we
             # should restart from zero.
             # Save some old values to use when recalculating things.
@@ -600,7 +608,7 @@ class SnapshotFinder(object):
                 self._finder_data['ts'] = \
                       numpy.subtract(self._finder_data['ts'], old_tstart) \
                         * 2+old_tstart
-                print '### merging first two intervals'
+                print('### merging first two intervals')
 
                 self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
                 return old_tstart, self.tstart
@@ -925,10 +933,10 @@ class Results(object):
             tfs = dict(c.fetchall())
             items = [  ]
             mostcommon = heapq.nlargest(10,
-                                        ((tf*dfs[e], e) for e, tf in tfs.iteritems() if dfs[e]!=0),
+                                        ((tf*dfs[e], e) for e, tf in iteritems(tfs) if dfs[e]!=0),
                                         key=lambda x: x[0])
             if mostcommon:
-                names = evs.get_event_names(zip(*mostcommon)[1])
+                names = evs.get_event_names(tuple(zip(*mostcommon))[1])
             else:
                 names = [ ]
             #print tlow, thigh
@@ -958,7 +966,7 @@ class Results(object):
                     )
         xs, ys = zip(*points)
         ls = ax.plot(xs, ys, '-', c='#E6C416')
-        print 'xxx'*50
+        print('xxx'*50)
         return ls
 
 
@@ -1071,7 +1079,7 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
                           regen=args.regen,
                           unordered=args.unordered,
                           grouped=args.grouped)
-        print "# file loaded:", args.input
+        print("# file loaded:", args.input)
 
     finder = SnapshotFinder(evs, tstart=args.tstart, tstop=args.tstop,
                             args=args,
@@ -1119,11 +1127,11 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
     # Print basic stats and exit, if requested.
     if args.stats:
         for a, b in evs.stats(convert_t=convert_t, tstart=args.tstart, tstop=args.tstop):
-            print a, b
+            print(a, b)
         exit(0)
 
 
-    print "# Total time range:", format_t(evs.t_min()), format_t(evs.t_max())
+    print("# Total time range:", format_t(evs.t_min()), format_t(evs.t_max()))
     #evs.dump()
 
     if args.interact:
@@ -1139,14 +1147,14 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
         #
         fout_thresh = open(args.output+'.out.txt', 'w')
         fout_full = open(args.output+'.out.J.txt', 'w')
-        print >> fout_thresh, '#tlow thigh dt sim len(old_es) measure_data'
-        print >> fout_full, '#t sim dt measure_data'
+        print('#tlow thigh dt sim len(old_es) measure_data', file=fout_thresh)
+        print('#t sim dt measure_data', file=fout_full)
     if return_output or args.plot:
         results = Results(finder, args=args.__dict__)
 
     time_last_plot = time.time()
 
-    print '# Columns: tlow thigh dt sim number_of_events'
+    print('# Columns: tlow thigh dt sim number_of_events')
     try:
       while True:
         x = finder.find()
@@ -1156,26 +1164,30 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
         thigh = x[1]
         dt = thigh-tlow
         val = finder.found_x_max
-        print format_t(tlow), format_t(thigh), dt, val, len(finder.old_es)
+        print(format_t(tlow), format_t(thigh), dt, val, len(finder.old_es))
         # Write and record informtion
         if return_output:
             output.append(ResultsRow(tlow, thigh, dt, val,
                                      finder._measure_data, finder._finder_data))
         if args.output:
-            print >> fout_thresh, format_t_log(tlow), format_t_log(thigh), \
-                                  dt, val, len(finder.old_es), \
-                  finder._measure_data
-            print >> fout_full, '# t1=%s t2=%s dt=%s'%(format_t_log(tlow), format_t_log(thigh),
-                                                       thigh-tlow)
-            print >> fout_full, '# sim=%s'%val
-            print >> fout_full, '# len(old_es)=%s'%len(finder.old_es)
+            print(format_t_log(tlow), format_t_log(thigh),
+                  dt, val, len(finder.old_es),
+                  finder._measure_data,
+                  file=fout_thresh)
+            print('# t1=%s t2=%s dt=%s'%(format_t_log(tlow),
+                                         format_t_log(thigh),
+                                         thigh-tlow),
+                  file=fout_full)
+            print('# sim=%s'%val, file=fout_full)
+            print('# len(old_es)=%s'%len(finder.old_es), file=fout_full)
             #print >> fout, '# len(old_es)=%s'%len(finder.old_es)
             for i, t in enumerate(finder._finder_data['ts']):
-                print >> fout_full, finder._finder_data['dts'][i], \
-                                    format_t_log(t), \
-                                    finder._finder_data['xs'][i], \
-                                    finder._finder_data['measure_data'][i]
-            print >> fout_full
+                print(finder._finder_data['dts'][i],
+                      format_t_log(t),
+                      finder._finder_data['xs'][i],
+                      finder._finder_data['measure_data'][i],
+                      file=fout_full)
+            print(file=fout_full)
             fout_full.flush()
 
         if return_output or args.plot:
@@ -1196,11 +1208,13 @@ def main(argv=sys.argv[1:], return_output=True, evs=None,
     if args.output and args.plot:
         tfidfs = results.tf_idf(evs, n=10)
         fout_tfidf = open(args.output+'.out.tfidf.txt', 'w')
-        print >> fout_tfidf, '#tlow thigh dt tfidf term'
+        print('#tlow thigh dt tfidf term', file=fout_tfidf)
         for (tlow, thigh, terms) in zip(results.tlows, results.thighs, tfidfs):
-            print >> fout_tfidf, format_t_log(tlow), format_t_log(thigh), thigh-tlow, '-', '-'
+            print(format_t_log(tlow), format_t_log(thigh), thigh-tlow,
+                  '-', '-',
+                  file=fout_tfidf)
             for x, name in terms:
-                print >> fout_tfidf, '-', '-', '-', x, name.encode('utf-8')
+                print('-', '-', '-', x, name.encode('utf-8'), file=fout_tfidf)
 
     if args.interact:
         import IPython

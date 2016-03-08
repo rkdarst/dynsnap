@@ -12,9 +12,19 @@ function (as opposed to the other main_* functions that do other
 calculations).
 """
 
+from __future__ import print_function, division
+
 import os
 import sqlite3
 import sys
+
+# Python 2/3 compatibility.  Avoid dependency on six for one function.
+if sys.version_info.major < 3:
+    def iteritems(x): return x.iteritems()
+else:
+    def iteritems(x): return iter(x.items())
+
+
 
 class ToInts(object):
     """Convert hashable objects to sequential ints."""
@@ -119,7 +129,7 @@ class Events(object):
         c = self.conn.cursor()
         c.execute("SELECT t,e,w from %s"%self.table)
         for row in c:
-            print row[0], row[1], row[2]
+            print(row[0], row[1], row[2])
 
     def __len__(self):
         """Total number of data points"""
@@ -193,7 +203,7 @@ class Events(object):
 
         it: iterator of (event_name, event_id) tuples."""
         if isinstance(it, dict):
-            it = ((eid, repr(ename)) for ename, eid in it.iteritems())
+            it = ((eid, repr(ename)) for ename, eid in iteritems(it))
         c = self.conn.cursor()
         c.executemany('''INSERT INTO event_name VALUES (?, ?)''', it)
         self.conn.commit()
@@ -384,9 +394,9 @@ def main(argv=sys.argv):
 def main_summary(argv=sys.argv):
     """Main function for producing other event summaries"""
     evs = Events(argv[1])
-    print "Number of events: ", len(evs)
-    print "Number of unique events: ", evs.n_distinct_events()
-    print "t_min, t_max:", evs.t_min(), evs.t_max()
+    print("Number of events: ", len(evs))
+    print("Number of unique events: ", evs.n_distinct_events())
+    print("t_min, t_max:", evs.t_min(), evs.t_max())
 
 
 def main_analyze(argv=sys.argv):
@@ -480,18 +490,18 @@ def main_burstiness(argv=sys.argv):
     burstinesses = [ burstiness(tArray, dataDuration=duration, periodicBoundary=True)
                      for tArray in event_ts.itervalues()
                      if len(tArray) > 1 ]
-    print len(event_ts)
-    print len(evs)
-    print np.mean(burstinesses), np.std(burstinesses)
+    print(len(event_ts))
+    print(len(evs))
+    print(np.mean(burstinesses), np.std(burstinesses))
 
 def _burstiness_do(elist):
-    print 'pre-start'
+    print('pre-start')
     evs = Events(fname)
     #print elist
-    print 'start'
+    print('start')
     lists = [ list(t for t,w in evs.iter_ordered_of_event(e)) for e in elist ]
     x =  [ burstiness(l) for l in lists if len(l) > 1 ]
-    print 'stop'
+    print('stop')
     return x
 
 def main_burstiness_parallel(argv=sys.argv):
@@ -509,7 +519,7 @@ def main_burstiness_parallel(argv=sys.argv):
             elist.append(next(event_iter))
     except StopIteration:
         pass
-    print len(events_grouped)
+    print(len(events_grouped))
 
     burstinesses = [ ]
 
@@ -519,14 +529,14 @@ def main_burstiness_parallel(argv=sys.argv):
     #    result = pool.apply_async(_burstiness_do, elist,
     #                              callback=lambda x: burstinesses.extend(x))
     results = pool.map(_burstiness_do, events_grouped)
-    print type(results)
+    print(type(results))
     for e in results:
         burstinesses.extend(e)
     pool.close()
     pool.join()
-    print evs.n_distinct_events()
-    print len(burstinesses)
-    print np.mean(burstinesses), np.std(burstinesses)
+    print(evs.n_distinct_events())
+    print(len(burstinesses))
+    print(np.mean(burstinesses), np.std(burstinesses))
 
 
 

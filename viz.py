@@ -1,5 +1,7 @@
 # Richard Darst, November 2015
 
+from __future__ import print_function, division
+
 import numpy as np
 
 import dynsnap
@@ -13,7 +15,7 @@ class Viz(object):
     figsize = np.asarray([2,2])
     ps = 2
     def __init__(self):
-        print "==", self.__class__.__name__
+        print("==", self.__class__.__name__)
         evs_list = list(self.model())
         evs = events.Events()
         evs.add_events((t,e,1) for t,e in evs_list)

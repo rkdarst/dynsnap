@@ -1,3 +1,5 @@
+from __future__ import print_function, division
+
 from itertools import product
 import math
 import numpy
@@ -234,8 +236,8 @@ def J1_c(dt_prev, dt, c, p):
     union = float( half_L + half_R + left + right - left*right )
 
     N = 100000
-    print dt, int(isect*N), int(union*N), \
-              int((half_L+left)*N), int((half_R+right)*N)
+    print(dt, int(isect*N), int(union*N),
+          int((half_L+left)*N), int((half_R+right)*N))
 
     return isect / union
 
@@ -246,7 +248,7 @@ def J1_c(dt_prev, dt, c, p):
     B_ = B(dt_prev,c,p)
     I = (1-A_)*(1-B_)
     U = (1-A_) + (1-B_) - I + A_extra(dt_prev,c,p) + A_extra(dt,c,p)
-    print dt, dt_prev, c, p, A_, B_, I, U
+    print(dt, dt_prev, c, p, A_, B_, I, U)
     return I / float(U)
 
 def A(t, c, p):
@@ -277,7 +279,7 @@ def A_extra(t, c, p):
         if n_replacement <= 0: continue
         P_n_replacement = stats.binom(t, c).pmf(n_replacement)
         s = t / float(n_replacement)
-        #print n_replacement, t, n_replacement, s, P_n_replacement
+        #print(n_replacement, t, n_replacement, s, P_n_replacement)
         P += P_n_replacement * (n_replacement-1) * (1-(1-p)**s)
     return P*10
 
@@ -297,13 +299,13 @@ if __name__ == "__main__":
     parser.add_argument("--grouped", action='store_true', help="group output by time")
     args = parser.parse_args()
 
-    args_dict = dict((k,v) for k,v in args.__dict__.iteritems() if v is not None)
+    args_dict = dict((k,v) for k,v in args.__dict__.items() if v is not None)
     it = globals()[args.model](**args_dict)
 
     if args.__dict__['grouped']:
         it = group_by_t(it)
         for t, events in it:
-            print t, " ".join(str(x) for x in events)
+            print(t, " ".join(str(x) for x in events))
     else:
         for t, e in it:
-            print t, e
+            print(t, e)

@@ -1,5 +1,7 @@
 # Richard Darst, May 2012
 
+from __future__ import print_function, division
+
 import os
 import re
 
@@ -88,7 +90,7 @@ def get_line_style(default='o-',
     if label and label in label_lookup:
         kwargs.update(label_lookup[label])
     else:
-        print label
+        print(label)
     #print label, label_lookup
 
     # Custom config of this function through kwargs
