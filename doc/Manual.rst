@@ -228,6 +228,11 @@ uniformly repeating pattern.  There is local similarity, differences
 on medium scales, and then similarity on the longest scale.  The
 method is expected to detect the longest scale similarity.
 
+This method is supposed to be parameter free.  Small changes in these
+options will not affect "true" intervals in well-formed data.
+However, if there are multiple timescales of similarity, these options
+can help to switch from one to another.
+
 In the below options, the "peak" means the similarity maximum value,
 as detected by the corresponding ``--peakfinder``.  We always start
 searching at a small *dt*, and increase.  At each time point,
@@ -236,6 +241,14 @@ control the stop condition.  These options are considered in this
 order: ``--dt-search-min`` first, then ``--dt-pastpeak-factor`` /
 ``--self.dt_peak_factor`` / ``--dt-pastpeak-max``.
 
+By default, we try very hard to find the longest self-similar
+timescales.  If that is too long (for example, all time), first try
+adjusting ``--dt-peak-factor`` (maybe 0.2 to 0.8).  If you then get a
+lot of noisy, short intervals, then use ``--dt-search-min`` (something
+large enough to compensate for random noise at short times).
+``--dt-pastpeak-max`` (shorter than long time scale) and
+``--dt-pastpeak-factor`` (try as low as 2) can be used to try to
+exclude whole-interval timescales, too.
 
 --peakfinder=NAME
     Method of finding peaks of similarity, if there is a plateau of
@@ -266,18 +279,22 @@ order: ``--dt-search-min`` first, then ``--dt-pastpeak-factor`` /
     possibly using the peak factor.  This is to prevent us from
     finding extremely small *dt*\ s at short times.  (default: -1)
 --dt-pastpeak-factor=FACTOR
-    Scan forward in time to at least *FACTOR*dt_peak*.  Default=25.
+    Scan forward in time to at least *FACTOR*dt_peak*.  Smaller value
+    means possibility of shorter intervals, but *only* if there is a
+    true short-to-long timescale transition.  This does not make an
+    early stop if similarity is continually increasing.   Default=25.
 --dt-pastpeak-max=DT
-    Scan forward in time past the maximum at least this far.
-    (default: None)
---dt-pastpeak-min=DT
     Never scan more than this far past a peak.  In other words, there
-    is a mandatory stop condition at *dt_peak=DT_PEAKFACTOR_MAX*.  The
+    is a mandatory stop condition at *dt_peak=DT_PEAKFACTOR_MAX*.
+    This does not make an early stop if similarity is continually
+    increasing. (default: None)
+--dt-pastpeak-min=DT
+    Scan forward in time past the maximum at least this far.  The
     difference with ``--dt-search-min`` is that this option measures
     past the peak, and ``--peak-factor`` overrides it, but
     ``--dt-search-min`` measures from *dt=0* and must be met before
     ``--peak-factor`` can stop the search.  In most cases, you can
-    just use this option only.  (default: 0)
+    just use ``--dt-search-min``.  (default: 0)
 --dt-search-min=DT
     When scanning forward in time, always search at least this amount
     of time before stopping, even if other stop condition are met.
