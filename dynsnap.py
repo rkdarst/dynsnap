@@ -149,6 +149,9 @@ class SnapshotFinder(object):
     log_dt_max = None
     dt_first_override = None
     merge_first = False
+    peakfinder = 'longest'
+    measure = 'jacc'
+    dtmode = 'log'
 
     dt_pastpeak_factor = 25
     dt_peak_factor = 0.0
@@ -158,8 +161,8 @@ class SnapshotFinder(object):
 
 
     def __init__(self, evs, tstart=None, tstop=None, weighted=False,
-                 measure='jacc',
-                 dtmode='log', peakfinder='longest',
+                 measure=None,
+                 dtmode=None, peakfinder=None,
                  merge_first=None,
                  args={},
                  dt_min=None, dt_max=None, dt_step=None,
@@ -173,23 +176,30 @@ class SnapshotFinder(object):
             args = args.__dict__
         self.args = args
         self.weighted = weighted
-        self.measure = getattr(self, 'measure_'+measure)
         self.last_dt_max = 0
+
+        try:
+            if measure is None: measure = self.measure
+            self.measure = getattr(self, 'measure_'+measure)
+        except AttributeError:
+            raise ValueError("Unknown measure: %s"%measure)
 
         if tstart is not None:    self.tstart = tstart
         else:                     self.tstart = evs.t_min()
         if tstop is not None:     self.tstop  = tstop
         else:                     self.tstop  = evs.t_max()
 
-        if dtmode == 'linear':    self.iter_all_dts = self.iter_all_dts_linear
-        elif dtmode == 'log':     self.iter_all_dts = self.iter_all_dts_log
-        elif dtmode == 'event':   self.iter_all_dts = self.iter_all_dts_event
-        else:                     raise ValueError("Unknown dtmode: %s"%dtmode)
+        try:
+            if dtmode is None: dtmode = self.dtmode
+            self.iter_all_dts = getattr(self, 'iter_all_dts_'+dtmode)
+        except AttributeError:
+            raise ValueError("Unknown dtmode: %s"%dtmode)
 
-        if   peakfinder == 'shortest':  self.pick_best_dt = self.pick_best_dt_shortest
-        elif peakfinder == 'longest':   self.pick_best_dt = self.pick_best_dt_longest
-        elif peakfinder == 'greedy':    self.pick_best_dt = self.pick_best_dt_greedy
-        else:                        raise ValueError("Unknown peakfinder: %s"%peakfinder)
+        try:
+            if peakfinder is None: peakfinder = self.peakfinder
+            self.pick_best_dt = getattr(self, 'pick_best_dt_'+peakfinder)
+        except AttributeError:
+            raise ValueError("Unknown peakfinder: %s"%peakfinder)
 
         locals_ = locals()
         for name in ('dt_min', 'dt_max', 'dt_step',
@@ -976,8 +986,9 @@ class Results(object):
 parser = argparse.ArgumentParser()
 parser.add_argument("input", help="benchmark model to simulate",)
 parser.add_argument("output", help="Output prefix", nargs='?')
-parser.add_argument("--measure", default='jacc',
-                    help="Similarity measure (jacc, cosine, cosine_uw)")
+parser.add_argument("--measure", default=SnapshotFinder.measure,
+                    help="Similarity measure (jacc, cosine, cosine_uw) "
+                    "(default %(default)s)")
 parser.add_argument("--cache", action='store_true',
                     help="Cache input for efficiency")
 parser.add_argument("--regen", action='store_true',
@@ -1011,12 +1022,12 @@ parser.add_argument("-i", "--interact", action='store_true',
 parser.add_argument("--tformat", help="Parse time in this format.  Options: 'unixtime'")
 parser.add_argument("--tstart", type=float, help="Time to begin analysis.")
 parser.add_argument("--tstop", type=float, help="Time to end analysis.")
-parser.add_argument("--dtmode", default='log',
+parser.add_argument("--dtmode", default=SnapshotFinder.dtmode,
                     help="dt search pattern (linear, log, event) "
                          "(default: %(default)s)")
 
 group = parser.add_argument_group("Time scale related options")
-group.add_argument("--peakfinder", default='longest',
+group.add_argument("--peakfinder", default=SnapshotFinder.peakfinder,
                     help="How to select peak of Jaccard similarity. "
                          "(shortest, longest, greedy) "
                          "(default=%(default)s)")
