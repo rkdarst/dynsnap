@@ -73,11 +73,13 @@ class Demo00(Viz):
 
 class Demo01(Viz):
     fname = 'demo01.[pdf,png]'
+    dsargs = ['--merge-first']
     @staticmethod
     def model():
         return models.demo01(seed=13)
 class Demo01b(Viz):
     fname = 'demo01b.[pdf,png]'
+    dsargs = ['--merge-first']
     @staticmethod
     def model():
         return models.demo01(seed=13, n=20, p=.5,
@@ -86,13 +88,14 @@ class Demo01b(Viz):
 
 class Demo02(Viz):
     fname = 'demo02.[pdf,png]'
-    dsargs = ['--dont-merge-first']
+    #dsargs = ['--dont-merge-first']
     @staticmethod
     def model():
         return models.demo02(N=10, seed=14)
 
 class Demo03(Viz):
     fname = 'demo03.[pdf,png]'
+    dsargs = ['--merge-first']
     @staticmethod
     def model():
         return models.demo01(seed=14, phase_ps=[0.3, 0.8, 0.3],
