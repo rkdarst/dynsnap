@@ -1000,10 +1000,9 @@ parser.add_argument("--grouped", action='store_true',
                     "events.")
 parser.add_argument("--stats", action='store_true',
                     help="Don't do segmentation, just print stats on the data.")
-parser.add_argument("--merge-first", action='store_true',
-                    default=False, dest="merge_first",
-                    help="Each line contains different space-separated "
-                    "events.")
+parser.add_argument("--merge-first", action='store_true', dest="merge_first",
+                    default=SnapshotFinder.merge_first,
+                    help="Merge the first two intervals (default %(default)s).")
 
 parser.add_argument("-t",  type=int, default=0,
                     help="Time column")
