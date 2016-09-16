@@ -260,11 +260,15 @@ exclude whole-interval timescales, too.
     shortest:
         shortest-time maximum similarity value.
     greedy:
-        A greedy search for longest plateau value.  As soon as the
+        A greedy search for the first local maximum.  As soon as the
         first decrease is detected, abort the search and use the
         longest plateau value.  This is in contrast to ``longest``
         and ``shortest``, which go a bit further and make sure
-        that there is no future greater maximum.
+        that there is no future greater maximum.  This is very
+	sensitive to random fluctuations, so consider using
+	``--dt-search-min`` along with this, or as a
+	``--peakfinder=loongest`` (default) with a low
+	``--dt-peak-factor`` and low ``-dt-pastpeak-max``.
 --dt-peak-factor=FACTOR
     If given, this will mean that we stop searching if the similarity
     drops to *FACTOR*similarity_max*.  In other words, this makes a
