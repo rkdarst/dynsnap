@@ -15,6 +15,7 @@ calculations).
 from __future__ import print_function, division
 
 import os
+import random
 import sqlite3
 import sys
 
@@ -64,6 +65,18 @@ class Events(object):
                      FROM %s LEFT JOIN event_name USING (e);'''%(self.table, self.table))
         self.conn.commit()
         c.close()
+    def copy(self):
+        """Make a copy of this Events object."""
+        evs = Events()
+        cur = evs.conn.cursor()
+        #for line in self.conn.iterdump():
+        #    if line.startswith('CREATE') or line.startswith('COMMIT'): continue
+        #    cur.execute(line)
+        cur.executemany('INSERT INTO event VALUES (?, ?, ?)', self.conn.execute('SELECT * FROM event'))
+        cur.executemany('INSERT INTO event_name VALUES (?, ?)', self.conn.execute('SELECT * FROM event_name'))
+        evs.conn.commit()
+        #evs.conn.executemany(self.conn.iterdump(), )
+        return evs
     def stats(self, convert_t=lambda x: x, tstart=None, tstop=None):
         """Print some event stats"""
         if tstart:
@@ -223,13 +236,51 @@ class Events(object):
         names = c.execute("""SELECT name FROM event_name WHERE e=?""",
                          (it, )).fetchall()
         return names[0][0]
-    def randomize_order(self):
-        import random
+    def shuffle_e(self):
+        """Shuffle all event IDs, preserving timestamps and weights."""
         c = self.conn.cursor()
-        rowids, es = zip(*c.execute('SELECT rowid, e FROM event'))
+        rowids, es = zip(*self._execute('SELECT rowid, e FROM event'))
         es = list(es)
         random.shuffle(es)
         c.executemany('UPDATE event SET e=? WHERE rowid=?', zip(es, rowids))
+        self.conn.commit()
+    randomize_order = shuffle_e
+    def shuffle_w(self):
+        """Shuffle all weights, preserving event IDs and timestamps."""
+        c = self.conn.cursor()
+        rowids, ws = zip(*c.execute('SELECT rowid, w FROM event'))
+        ws = list(ws)
+        random.shuffle(ws)
+        c.executemany('UPDATE event SET w=? WHERE rowid=?', zip(ws, rowids))
+        self.conn.commit()
+    def shuffle_ew(self):
+        """Shuffle all event IDs and weights together.
+
+        shuffles all (event, weight) pairs, but keeps original
+        timestamps.  The effect is the same as randomly interchanging
+        all timestamps."""
+        c = self.conn.cursor()
+        rowids, es, ws = zip(*c.execute('SELECT rowid, e, w FROM event'))
+        items = list(zip(es, ws))
+        random.shuffle(items)
+        es, ws = zip(*items)
+        c.executemany('UPDATE event SET e=?, w=? WHERE rowid=?', zip(es, ws, rowids))
+        self.conn.commit()
+    def shuffle_t1(self):
+        """Shuffle timestamps while preserving order.
+
+        All event IDs, weights are the same and in the same order, but
+        timestamps are randomly created from a uniform distribution.
+        """
+        t_min = self.t_min()
+        t_max = self.t_max()
+        c = self.conn.cursor()
+        rowids, = zip(*c.execute('SELECT rowid FROM event ORDER BY t'))
+        ts = [ random.uniform(t_min, t_max) for _ in range(len(rowids)) ]
+        ts.sort()
+        c.executemany('UPDATE event SET t=? WHERE rowid=?', zip(ts, rowids))
+        self.conn.commit()
+
 
 class _EventListSubset(object):
     """This is used for partial evaluation of Events.__getitem__"""
