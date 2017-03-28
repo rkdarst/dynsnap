@@ -182,6 +182,9 @@ class SnapshotFinder(object):
         self.weighted = weighted
         self.last_dt_max = 0
 
+        if len(evs) == 0:
+            raise ValueError("There are no events within our Events object!")
+
         try:
             if measure is None: measure = self.measure
             self.measure = getattr(self, 'measure_'+measure)
