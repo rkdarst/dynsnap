@@ -63,6 +63,7 @@ class Events(object):
                      (e INTEGER PRIMARY KEY, name TEXT)''')
         c.execute('''CREATE VIEW IF NOT EXISTS view_%s AS SELECT e, t, w, name
                      FROM %s LEFT JOIN event_name USING (e);'''%(self.table, self.table))
+        c.execute('PRAGMA cache_size = -1000000')
         self.conn.commit()
         c.close()
     def copy(self):
@@ -193,7 +194,7 @@ class Events(object):
                       (interval.start, interval.stop, ))
             return c
         else:
-            return _EventsListSubset(self, interval.start)
+            return _EventListSubset(self, interval.start)
     def iter_ordered(self):
         c = self.conn.cursor()
         c.execute('''select t, e, w from %s order by t'''%self.table)
@@ -292,8 +293,9 @@ class _EventListSubset(object):
         assert interval.start is None
         assert interval.stop is not None
 
-        c.execute('''select t, e, w from %s where ? <= t AND t < ?'''%self.events.table,
-                  (self.t_start, interval.stop, ))
+        c = self.events.conn.execute(
+            '''select t, e, w from %s where ? <= t AND t < ?'''%self.events.table,
+            (self.t_start, interval.stop, ))
         return c
 
 
