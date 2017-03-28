@@ -220,6 +220,25 @@ class SnapshotFinder(object):
         if self.dt_max   is None:    self.dt_max   = 1000*self.dt_step
 
 
+    def run(self, verbose=False, **kwargs):
+        """Do a run, return results"""
+        results = Results(self, args=kwargs)
+        while True:
+            x = self.find()
+            if x is None:
+                break
+            results.add(self)
+            # Printing if desired
+            if verbose:
+                tlow  = x[0]
+                thigh = x[1]
+                dt = thigh-tlow
+                val = self.found_x_max
+                print(tlow, thigh, dt, val, len(self.old_es))
+        return results
+
+
+
     # Two generalized set-making functions.  These take an iterator
     # over events, and return set objects.  They are separate methods,
     # so that we can have either unweighted or weighted sets, or even
