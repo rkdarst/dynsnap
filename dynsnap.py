@@ -153,6 +153,7 @@ class SnapshotFinder(object):
     peakfinder = 'longest'
     measure = 'jacc'
     dtmode = 'log'
+    find_critical_events = True
 
     dt_pastpeak_factor = 25
     dt_peak_factor = 0.0
@@ -171,6 +172,7 @@ class SnapshotFinder(object):
                  dt_pastpeak_factor=None, dt_peak_factor=None,
                  dt_pastpeak_min=None, dt_pastpeak_max=None,
                  dt_search_min=0,
+                 find_critical_events=None,
                  quiet=None,
                  ):
         self.evs = evs
@@ -212,6 +214,7 @@ class SnapshotFinder(object):
                      'dt_pastpeak_min',
                      'dt_pastpeak_max',
                      'dt_search_min',
+                     'find_critical_events',
                      'quiet',
                      ):
             if locals_[name] is not None:
@@ -588,7 +591,8 @@ class SnapshotFinder(object):
         if ((.95*xs[i_max] <= xs[-1])
             and self.old_es is not None
             and (self.tstart+dts[-1] < self.tstop-.001
-                 or approxeq(xs[len(xs)//2], xs[-1], .01))):
+                 or approxeq(xs[len(xs)//2], xs[-1], .01))
+            and self.find_critical_events):
             if not self.quiet:
                 print("### critical event detected at t=%s"%self.tstart)
             # At this point, we have had an extreme event and we
