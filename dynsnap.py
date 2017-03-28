@@ -140,6 +140,7 @@ class SnapshotFinder(object):
     In most cases, you can use the main() function which handles much
     more of the set up and data collection.
     """
+    quiet = False
     old_es = None   # None on first round
     old_incremental_es = None
     dt_min = None
@@ -170,6 +171,7 @@ class SnapshotFinder(object):
                  dt_pastpeak_factor=None, dt_peak_factor=None,
                  dt_pastpeak_min=None, dt_pastpeak_max=None,
                  dt_search_min=0,
+                 quiet=None,
                  ):
         self.evs = evs
         if isinstance(args, argparse.Namespace):
@@ -210,6 +212,7 @@ class SnapshotFinder(object):
                      'dt_pastpeak_min',
                      'dt_pastpeak_max',
                      'dt_search_min',
+                     'quiet',
                      ):
             if locals_[name] is not None:
                 setattr(self, name, locals_[name])
@@ -567,7 +570,8 @@ class SnapshotFinder(object):
             and self.old_es is not None
             and (self.tstart+dts[-1] < self.tstop-.001
                  or approxeq(xs[len(xs)//2], xs[-1], .01))):
-            print("### critical event detected at t=%s"%self.tstart)
+            if not self.quiet:
+                print("### critical event detected at t=%s"%self.tstart)
             # At this point, we have had an extreme event and we
             # should restart from zero.
             # Save some old values to use when recalculating things.
@@ -618,7 +622,8 @@ class SnapshotFinder(object):
                 self._finder_data['ts'] = \
                       numpy.subtract(self._finder_data['ts'], old_tstart) \
                         * 2+old_tstart
-                print('### merging first two intervals')
+                if not self.quiet:
+                    print('### merging first two intervals')
 
                 self.old_n_events = self.evs.count_interval(old_tstart, self.tstart)
                 return old_tstart, self.tstart
