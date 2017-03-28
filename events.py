@@ -250,7 +250,7 @@ import ast
 import os
 def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
                 unordered=False, grouped=False, cache_fname=None,
-                cols_data=None):
+                cols_data=None, separator=None):
     """Load events from file into an Events object.
 
     This function serves multiple purposes.  With just an input file,
@@ -291,7 +291,7 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
             #line = line.split('#', 1)[0]
             line = line.strip()
             if line.startswith('#'): continue
-            line = line.split()
+            line = line.split(separator)
             #line_orig = tuple(line)
             if not line: continue
             t = ast.literal_eval(line[col_time])
@@ -358,7 +358,7 @@ def load_events(fname, col_time=0, col_weight=None, cache=False, regen=False,
     ev.add_event_names(events)
     return ev
 
-def main(argv=sys.argv):
+def main_cache(argv=sys.argv):
     """Main function for event caching"""
     import argparse
 
@@ -379,6 +379,8 @@ def main(argv=sys.argv):
     parser.add_argument("--datacols", default="",
                         help="Columns containing the data"
                             " (comma separated list)")
+    parser.add_argument("--separator", default=None,
+                        help="Column separator (default any whitespace)")
 
     args = parser.parse_args(argv[1:])
 
@@ -388,7 +390,8 @@ def main(argv=sys.argv):
                       unordered=args.unordered,
                       grouped=args.grouped,
                       cols_data=args.datacols,
-                      cache=True)
+                      cache=True,
+                      separator=args.separator)
 
 
 def main_summary(argv=sys.argv):
@@ -551,4 +554,4 @@ if __name__ == '__main__':
     elif 'main_'+sys.argv[1] in globals():
         globals()['main_'+sys.argv[1]](argv=sys.argv[0:1]+sys.argv[2:])
     else:
-        main()
+        main_cache()
