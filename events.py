@@ -66,6 +66,12 @@ class Events(object):
         c.execute('PRAGMA cache_size = -1000000')
         self.conn.commit()
         c.close()
+    @classmethod
+    def from_iter(cls, it):
+        """Create new Events from iter of (t,e,w)"""
+        evs = cls()
+        evs.add_events(it)
+        return evs
     def copy(self):
         """Make a copy of this Events object."""
         evs = Events()
@@ -115,7 +121,8 @@ class Events(object):
     def add_events(self, it):
         """Add events from (t,e,w) iterator."""
         c = self.conn.cursor()
-        c.executemany("INSERT INTO %s VALUES (?, ?, ?)"%self.table, it)
+        c.executemany("INSERT INTO %s VALUES (?, ?, ?)"%self.table,
+                          (x if len(x)==3 else (x[0],x[1],1) for x in it))
         self.conn.commit()
     def t_min(self):
         """min(t) across all data"""
@@ -145,6 +152,7 @@ class Events(object):
         for row in c:
             print(row[0], row[1], row[2])
 
+    # Basic properties.
     def __len__(self):
         """Total number of data points"""
         c = self.conn.cursor()
@@ -156,10 +164,11 @@ class Events(object):
         c.execute("SELECT count( DISTINCT e ) from %s"%self.table)
         return c.fetchone()[0]
     def count_interval(self, low, high):
-        """Number of points low<=t</high"""
+        """Number of points low <= t < thigh"""
         c = self.conn.cursor()
         c.execute("SELECT count(*) FROM %s WHERE ?<=t AND t <?"%self.table, (low, high))
         return c.fetchone()[0]
+    # Iterators of events
     def iter_distinct_events(self):
         """Iterate over all distinct integer events IDs e"""
         c = self.conn.cursor()
@@ -171,8 +180,6 @@ class Events(object):
         c = self.conn.cursor()
         c.execute("SELECT DISTINCT t, w from %s where e=?"%self.table, (e, ))
         return c
-
-
     def __getitem__(self, interval):
         """Return a slice: iterator of (t,e,w) in interval.
 
@@ -195,9 +202,13 @@ class Events(object):
             return c
         else:
             return _EventListSubset(self, interval.start)
-    def iter_ordered(self):
+    def iter_ordered(self, weights=True):
+        """Iter all (t,e,w) or (t,e) tuples."""
         c = self.conn.cursor()
-        c.execute('''select t, e, w from %s order by t'''%self.table)
+        if weights:
+            c.execute('''select t, e, w from %s order by t'''%self.table)
+        else:
+            c.execute('''select t, e from %s order by t'''%self.table)
         return c
     def event_density(self, domain, halfwidth, low=None, high=None):
         """Return a local average of event density"""
@@ -237,6 +248,7 @@ class Events(object):
         names = c.execute("""SELECT name FROM event_name WHERE e=?""",
                          (it, )).fetchall()
         return names[0][0]
+    # Randomization
     def shuffle_e(self):
         """Shuffle all event IDs, preserving timestamps and weights."""
         c = self.conn.cursor()
@@ -280,6 +292,23 @@ class Events(object):
         ts = [ random.uniform(t_min, t_max) for _ in range(len(rowids)) ]
         ts.sort()
         c.executemany('UPDATE event SET t=? WHERE rowid=?', zip(ts, rowids))
+        self.conn.commit()
+    def randomize_eid(self, new_es=None):
+        """Randomize event IDs: keep all events the same"""
+        es, = zip(*self._execute('SELECT DISTINCT e FROM event order by e'))
+        eid_min = min(es)
+        eid_max = max(es)
+        if new_es is None:
+            new_es = list(range(eid_max+1, eid_max+1+len(es)))
+            random.shuffle(new_es)
+        elif new_es == 'order':
+            es = list(x[0] for x in self._execute('SELECT e FROM event GROUP BY e ORDER BY min(t)'))
+            new_es = list(range(eid_max+1, eid_max+1+len(es)))
+        #print("mapping=", list(zip(es, new_es)))
+        self.conn.executemany('UPDATE %s SET e=? WHERE e=?'%self.table,
+                         zip(new_es, es))
+        self.conn.executemany('UPDATE event_name SET e=? WHERE e=?',
+                         zip(new_es, es))
         self.conn.commit()
 
 
