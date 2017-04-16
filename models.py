@@ -5,6 +5,10 @@ import math
 import numpy
 import random
 import scipy.stats as stats
+import sys
+
+if sys.version_info[0] <= 2:
+    range = rangex
 
 # convenience function
 rand = lambda rng: rng.uniform(0, 1)
@@ -31,12 +35,14 @@ def get_rng(seed):
 
 
 def toy101(**kwargs):
+    """Same five events (1,2,3,4,5) repeated for all time [0,100) """
     for t in range(0, 100):
         events = [0, 1, 2, 3, 4, 5]
         for e in sorted(events):
             yield t, e
 
 def toy102(**kwargs):
+    """[0,5] for first 10t, [6,11] for the next 10t, etc."""
     for t in range(0, 100):
         generation = t // 10
         events = range(generation*6, (generation+1)*6)
@@ -44,6 +50,7 @@ def toy102(**kwargs):
             yield t, e
 
 def toy103(seed=None, **kwargs):
+    """For each 10t generation, 25 random events out of 50."""
     rng = get_rng(seed)
     n = 50
     s = 25
@@ -81,15 +88,15 @@ def demo02(seed=None, N=50, t_phase=20, T=40, p=.5, c=.5,
         c_func = lambda : c
     if p_func is None:
         p_func = lambda : p
-    events = set(xrange(N))
+    events = set(range(N))
     #event_c = dict((e, c_func()) for e in events)
     event_p = dict((e, p_func()) for e in events)
 
-    for t in xrange(T):
+    for t in range(T):
         phase = (t // t_phase) % 3 # 0, 1, or 2
         # critical events - all events change *before* t
         #if t in t_crit:
-        #    events = set(nextevent() for _ in xrange(N))
+        #    events = set(nextevent() for _ in range(N))
         #    event_c = dict((e, c_func()) for e in events)
         #    event_p = dict((e, p_func()) for e in events)
 
@@ -131,14 +138,14 @@ def drift(N=1000, p=.2, c=.01,
         p_func = lambda : p
 
 
-    events = set(xrange(N))
+    events = set(range(N))
     event_c = dict((e, c_func()) for e in events)
     event_p = dict((e, p_func()) for e in events)
 
-    for t in xrange(t_max):
+    for t in range(t_max):
         # critical events - all events change *before* t
         if t in t_crit:
-            events = set(nextevent() for _ in xrange(N))
+            events = set(nextevent() for _ in range(N))
             event_c = dict((e, c_func()) for e in events)
             event_p = dict((e, p_func()) for e in events)
 
@@ -159,6 +166,19 @@ def drift(N=1000, p=.2, c=.01,
             events.add(i)
             del event_c[e] ; event_c[i] = c_func()
             del event_p[e] ; event_p[i] = p_func()
+
+
+def drift_hard(N=10, slope=.2, p=.2, c=.01,
+          t_max=1000, seed=None,
+          t_crit=(),
+          c_func=None,
+          p_func=None,
+          **kwargs):
+    rng = get_rng(seed)
+    for t in range(t_max):
+        for e in range(int(t*slope), int(N+t*slope)):
+            if rand(rng) < p:
+                yield t, e
 
 
 def periodic(N=10000, p=.2, q=.2, c_scale=.01,
@@ -193,6 +213,19 @@ def periodic(N=10000, p=.2, q=.2, c_scale=.01,
         for e in events:
             if rand(rng) < c:
                 edge_p[e] = p   if rand(rng) < q   else 0.0
+
+def block_model(N, T, width=10, p=.5, blocks=[], seed=None):
+    """."""
+    rng = get_rng(seed)
+    block_max = max(max(x) for x in blocks)
+    block_size = N//(block_max+1)
+    for t in range(T):
+        phase = (t//width) % len(blocks)
+        for block in blocks[phase]:
+            #print(block_max, block_size, phase, blocks[phase])
+            for e in range(block_size*block, block_size*(block+1)):
+                if rand(rng) < p:
+                    yield t, e
 
 
 #
