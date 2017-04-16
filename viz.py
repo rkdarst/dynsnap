@@ -60,6 +60,26 @@ class Viz(object):
         #import IPython ; IPython.embed()
 
 
+def plot_events(evs, ax,
+                xticks=False, yticks=False, xlim=None, ylim=None,
+                ps=2):
+    from matplotlib.font_manager import FontProperties
+    font = FontProperties()
+    font.set_family('serif')
+    ax.set_xlabel('time', fontproperties=font)
+    ax.set_ylabel('event ID', fontproperties=font)
+    if not xticks:
+        ax.set_xticks([])
+    if not yticks:
+        ax.set_yticks([])
+    ax.autoscale(tight=True)
+    if xlim:  ax.set_xlim(*xlim)
+    if ylim:  ax.set_ylim(*ylim)
+    ts, es = zip(*evs.iter_ordered(weights=False))
+    ax.scatter(ts, es, s=ps, facecolor='b', edgecolor='b')
+
+
+
 class Demo00(Viz):
     fname = 'demo00.[pdf,png]'
     ps = 50
